@@ -1,5 +1,3 @@
-using System;
-using System.IO;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -55,10 +53,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
                 //selfLink is like this: "dbs/auo6AA==/colls/auo6AOdfluE=/docs/auo6AOdfluEnFwIAAAAAAA==/";
                 await client.DeleteDocumentAsync(selfLink, new RequestOptions { PartitionKey = new PartitionKey(LoggedInUser.userWebId) });
-            }
-            else
-            {
-                //do something if not authenticated
             }
             return new OkObjectResult(IsAuthenticated);
         }

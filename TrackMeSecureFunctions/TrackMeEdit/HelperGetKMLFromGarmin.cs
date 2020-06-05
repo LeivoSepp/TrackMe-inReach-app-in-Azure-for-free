@@ -1,5 +1,4 @@
-﻿using Microsoft.AspNetCore.Mvc.ApplicationModels;
-using System;
+﻿using System;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
@@ -11,7 +10,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
     {
         public async Task<string> GetKMLAsync(KMLInfo getTrack)
         {
-            
             string userUrl = $"{getTrack.InReachWebAddress}{CreateDateParameter(getTrack.d1, "d1")}{CreateDateParameter(getTrack.d2, "d2")}";
             string garminUrl = $"https://share.garmin.com/Feed/Share/{userUrl}";
 

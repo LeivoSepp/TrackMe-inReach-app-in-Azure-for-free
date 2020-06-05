@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace TrackMePublicFunctions.TrackMe
+﻿namespace TrackMePublicFunctions.TrackMe
 {
     public class KMLInfo
     {

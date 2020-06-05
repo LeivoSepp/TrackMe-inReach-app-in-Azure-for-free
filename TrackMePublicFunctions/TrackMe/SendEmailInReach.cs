@@ -5,7 +5,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json;
 using SendGrid.Helpers.Mail;
 using System.Linq;
@@ -25,11 +24,9 @@ namespace TrackMePublicFunctions.TrackMe
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user' and c.userWebId = {userWebId}"
                 )] IEnumerable<InReachUser> users,
 
-            [SendGrid(ApiKey = "SendGridAPIKey")] IAsyncCollector<SendGridMessage> messageCollector,
-            ILogger log)
+            [SendGrid(ApiKey = "SendGridAPIKey")] IAsyncCollector<SendGridMessage> messageCollector
+            )
         {
-            //var allUsers = users.GetPropertyValue<InReachUser[]>("InReachUsers");
-
             var user = users.First();
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();

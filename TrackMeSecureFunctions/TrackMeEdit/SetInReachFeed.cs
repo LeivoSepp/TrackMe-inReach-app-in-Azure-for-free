@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Web;
 using System.Text;
@@ -12,7 +11,6 @@ using System.Globalization;
 using System.Security.Claims;
 using System.IO;
 using Newtonsoft.Json;
-using System.Linq;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -66,8 +64,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users,
-            ILogger log)
+            )] IEnumerable<InReachUser> users
+            )
         {
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
@@ -101,14 +99,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //add or update the track based on the id
                     await output.AddAsync(fullTrack);
                 }
-                else
-                {
-                    //no data posted
-                }
-            }
-            else
-            {
-                //do something if not authenticated
             }
             return new OkObjectResult(IsAuthenticated);
         }

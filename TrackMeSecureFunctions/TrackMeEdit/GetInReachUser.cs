@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Security.Claims;
 using System.IO;
@@ -41,8 +40,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection"
                 )]
-            IAsyncCollector<KMLInfo> addDocuments,
-            ILogger log)
+            IAsyncCollector<KMLInfo> addDocuments)
         {
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
             ClaimsPrincipal Identities = req.HttpContext.User;
@@ -117,20 +115,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 await addDocuments.AddAsync(item);
                 await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
             }
-
-
-            //IDocumentQuery<KMLInfo> query = client.CreateDocumentQuery<KMLInfo>(collectionUri)
-            //    .Where(p => p.groupid == userWebId)
-            //    .AsDocumentQuery();
-            //while (query.HasMoreResults)
-            //{
-            //    foreach (KMLInfo item in await query.ExecuteNextAsync())
-            //    {
-            //        item.groupid = newUserWebId;
-            //        await addDocuments.AddAsync(item);
-            //        await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
-            //    }
-            //}
         }
     }
     public class InReachUser

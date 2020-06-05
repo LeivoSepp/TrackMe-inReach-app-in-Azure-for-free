@@ -7,7 +7,6 @@ using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
-using Microsoft.Extensions.Logging;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -34,8 +33,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection"
            )] DocumentClient documentClient,
-            ExecutionContext context,
-            ILogger log)
+            ExecutionContext context)
         {
             var config = new ConfigurationBuilder()
                 .SetBasePath(context.FunctionAppDirectory)
@@ -98,7 +96,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
                 await output.AddAsync(fullTrack);
             }
-            return;
         }
     }
 }

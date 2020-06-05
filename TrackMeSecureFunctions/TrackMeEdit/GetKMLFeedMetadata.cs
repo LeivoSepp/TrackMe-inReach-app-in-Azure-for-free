@@ -1,10 +1,7 @@
-using System;
-using System.IO;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using System.Collections.Generic;
 using System.Security.Claims;
 
@@ -40,9 +37,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users,
-
-            ILogger log)
+            )] IEnumerable<InReachUser> users)
         {
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();

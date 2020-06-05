@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 
 namespace TrackMePublicFunctions.TrackMe
 {
@@ -20,9 +19,7 @@ namespace TrackMePublicFunctions.TrackMe
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]
-            KMLInfo input,
-
-            ILogger log)
+            KMLInfo input)
         {
             return new OkObjectResult(input.LineString);
         }

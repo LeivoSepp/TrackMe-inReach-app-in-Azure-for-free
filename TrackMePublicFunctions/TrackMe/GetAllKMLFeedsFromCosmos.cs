@@ -3,7 +3,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
-using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 
 namespace TrackMePublicFunctions.TrackMe
@@ -19,8 +18,8 @@ namespace TrackMePublicFunctions.TrackMe
                 ConnectionStringSetting = "CosmosDBConnection",
                 SqlQuery = "SELECT c.id, c.Title, c.d1, c.d2 FROM c WHERE c.groupid = {userWebId} ORDER BY c.d1 DESC"
                 )]
-                JArray input,
-            ILogger log)
+                JArray input
+            )
         {
             return new OkObjectResult(input);
         }
