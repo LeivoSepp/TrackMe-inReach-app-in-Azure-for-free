@@ -1,0 +1,25 @@
+{
+  "proxies": {
+    "crud": {
+      "matchCondition": {
+        "methods": [ "GET", "OPTIONS", "HEAD", "POST" ],
+        "route": "/{path}"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/crud.html"
+    },
+    "static": {
+      "matchCondition": {
+        "methods": [ "GET", "OPTIONS", "HEAD", "POST" ],
+        "route": "/{path}/crud.html"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/crud.html"
+    },
+    "login": {
+      "matchCondition": {
+        "methods": [ "GET", "POST" ],
+        "route": "/"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/login.html"
+    }
+  }
+}

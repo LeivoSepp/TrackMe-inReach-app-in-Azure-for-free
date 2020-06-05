@@ -1,0 +1,32 @@
+{
+  "proxies": {
+    "home": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/"
+    },
+    "static": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/{path}"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/"
+    },
+    "css": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/{path}/style.css"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/style.css"
+    },
+    "js": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/{path}/animenu.js"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/animenu.js"
+    }
+  }
+}
