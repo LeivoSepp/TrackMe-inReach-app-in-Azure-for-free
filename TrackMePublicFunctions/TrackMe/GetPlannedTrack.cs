@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace TrackMePublicFunctions.TrackMe
 {
-    public class Placemark
+    public class PlacemarkTrack
     {
         public string Track { get; set; }
     }
@@ -22,7 +22,7 @@ namespace TrackMePublicFunctions.TrackMe
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]
-            Placemark input)
+            PlacemarkTrack input)
         {
             return new OkObjectResult(input.Track);
         }

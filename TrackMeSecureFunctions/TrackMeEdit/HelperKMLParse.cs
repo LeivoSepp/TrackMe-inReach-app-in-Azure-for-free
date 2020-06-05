@@ -273,10 +273,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     NewPlacemark.XPathSelectElement("//kml:Point/kml:coordinates", ns).Value =
                         placemark.XPathSelectElement("./kml:Point/kml:coordinates", ns).Value;
                     //copy LatLon
-                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Latitude']/kml:value", ns).Value =
+                    var thisLatitude = 
+                        NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Latitude']/kml:value", ns).Value =
                         placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Latitude']/kml:value", ns).Value;
-                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value =
+                    var thisLongitude = 
+                        NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value =
                         placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value;
+
                     //select Course element and transform it compass style heading and remove fractions
                     string heading = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Course']/kml:value", ns).Value;
                     heading = heading.Substring(0, heading.IndexOf("."));
