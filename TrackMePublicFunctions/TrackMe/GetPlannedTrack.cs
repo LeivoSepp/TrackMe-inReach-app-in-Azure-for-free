@@ -6,6 +6,10 @@ using Microsoft.AspNetCore.Http;
 
 namespace TrackMePublicFunctions.TrackMe
 {
+    public class Placemark
+    {
+        public string Track { get; set; }
+    }
     public static class GetPlannedTrack
     {
         [FunctionName("GetPlannedTrack")]
@@ -18,7 +22,7 @@ namespace TrackMePublicFunctions.TrackMe
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]
-            KMLInfo input)
+            Placemark input)
         {
             return new OkObjectResult(input.Track);
         }
