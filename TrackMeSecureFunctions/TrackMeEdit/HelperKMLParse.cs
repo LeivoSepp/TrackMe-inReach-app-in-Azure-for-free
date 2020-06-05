@@ -5,6 +5,8 @@ using System.Linq;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
+using GeoCoordinatePortable;
+using Microsoft.Azure.Documents.SystemFunctions;
 
 //google map icons: http://kml4earth.appspot.com/icons.html
 
@@ -19,6 +21,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         const string newBalloon = "<table style='width:180'>" +
             "<tr><td colspan='2'><b>Time: $[Time]</b></td></tr>" +
             "<tr><td>Speed</td><td> $[Velocity] </td></tr>" +
+            "<tr><td>Distance</td><td> $[Distance] </td></tr>" +
+            "<tr><td>Time</td><td> $[TimeElapsed] </td></tr>" +
             "<tr><td>Elevation</td><td> $[Elevation] </td></tr>" +
             "<tr><td>Heading</td><td> $[Course] </td></tr>" +
             "<tr><td colspan='2' style='border:1px solid lightblue;'> $[Text] </td></tr>" +
@@ -190,32 +194,31 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 new XElement(defaultns + "ExtendedData",
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Time"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Velocity"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
+                new XElement(defaultns + "Data",
+                    new XAttribute("name", "Distance"),
+                        new XElement(defaultns + "value")),
+                new XElement(defaultns + "Data",
+                    new XAttribute("name", "TimeElapsed"),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Elevation"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Course"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Text"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Latitude"),
-                        new XElement(defaultns + "value")
-                    ),
+                        new XElement(defaultns + "value")),
                 new XElement(defaultns + "Data",
                     new XAttribute("name", "Longitude"),
-                        new XElement(defaultns + "value")
-                    )
+                        new XElement(defaultns + "value"))
                 ),
                 new XElement(defaultns + "styleUrl"),
                 new XElement(defaultns + "Point",
@@ -262,6 +265,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var placemarks = xmlTrack.XPathSelectElements("//kml:Placemark", ns);
 
             var dateTimeString = string.Empty;
+            string lastLatitude = "0.0";
+            string lastLongitude = "0.0";
+            double totalDistance = 0;
+            TimeSpan totalTime = new TimeSpan();
+            DateTime lastDate = new DateTime();
             //iterate through each Placemark
             foreach (var placemark in placemarks)
             {
@@ -273,12 +281,26 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     NewPlacemark.XPathSelectElement("//kml:Point/kml:coordinates", ns).Value =
                         placemark.XPathSelectElement("./kml:Point/kml:coordinates", ns).Value;
                     //copy LatLon
-                    var thisLatitude = 
+                    var thisLatitude =
                         NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Latitude']/kml:value", ns).Value =
                         placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Latitude']/kml:value", ns).Value;
-                    var thisLongitude = 
+                    var thisLongitude =
                         NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value =
                         placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value;
+
+                    //calculate distance
+                    GeoCoordinate pin1 = new GeoCoordinate(double.Parse(thisLatitude, CultureInfo.InvariantCulture), double.Parse(thisLongitude, CultureInfo.InvariantCulture));
+                    GeoCoordinate pin2 = new GeoCoordinate(double.Parse(lastLatitude, CultureInfo.InvariantCulture), double.Parse(lastLongitude, CultureInfo.InvariantCulture));
+                    if (lastLatitude != "0.0" && lastLongitude != "0.0")
+                        totalDistance += pin1.GetDistanceTo(pin2)/1000;                    
+                    lastLatitude = thisLatitude;
+                    lastLongitude = thisLongitude;
+                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Distance']/kml:value", ns).Value = totalDistance.ToString("0")+ " km";
+
+                    //select Speed element end remove fraction after comma: 12 km/m
+                    string speed = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Velocity']/kml:value", ns).Value;
+                    speed = speed.Substring(0, speed.IndexOf(".")) + " km/h";
+                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Velocity']/kml:value", ns).Value = speed;
 
                     //select Course element and transform it compass style heading and remove fractions
                     string heading = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Course']/kml:value", ns).Value;
@@ -299,6 +321,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     DateTime dT = DateTime.Parse(dateTimeString, CultureInfo.CreateSpecificCulture("en-US"));
                     dateTimeString = $"{dT:HH:mm dd.MM.yyyy}";
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value = dateTimeString;
+
+                    //calculate total time
+                    if (lastDate != DateTime.MinValue)
+                        totalTime += dT.Subtract(lastDate);
+                    lastDate = dT;
+                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'TimeElapsed']/kml:value", ns).Value = totalTime.ToString("%d\\ %h\\:mm");
 
                     //select events and messages
                     string textValue = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;

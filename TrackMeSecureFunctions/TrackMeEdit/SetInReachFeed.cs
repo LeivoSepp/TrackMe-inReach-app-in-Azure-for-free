@@ -89,6 +89,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     string id = RemoveDiacritics(fullTrack.id);
                     id = UrlEncode(HttpUtility.UrlEncode(UrlEncode(id)));
                     fullTrack.id = id;
+                    fullTrack.LastPointTimestamp = "";
 
                     HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
                     //get feed grom garmin
