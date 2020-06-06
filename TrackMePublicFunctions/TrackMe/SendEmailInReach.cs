@@ -32,10 +32,8 @@ namespace TrackMePublicFunctions.TrackMe
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
             
-            var dateTime = data?.date;
-            var InReachMessage = data?.inReach;
-
-            string subject = $"inReach message from {user.userWebId.First().ToString().ToUpper() + user.userWebId.Substring(1)} at {dateTime}";
+            string subject = data?.eMailSubject;
+            string messageBody = data?.eMailMessage;
 
             var message = new SendGridMessage();
 
@@ -45,7 +43,7 @@ namespace TrackMePublicFunctions.TrackMe
             message.AddBccs(emailSubscribers);
             message.SetFrom(user.email, user.name);
 
-            message.AddContent("text/html", $"Hello, <br><br>Received at: {dateTime} <br> {InReachMessage} <br><br> Check me on the map: https://trackmefunctions.azurewebsites.net/{user.userWebId} <br><br>Best regards,<br>Whoever is carrying this device.");
+            message.AddContent("text/html", messageBody);
             message.SetSubject(subject);
             await messageCollector.AddAsync(message);
 

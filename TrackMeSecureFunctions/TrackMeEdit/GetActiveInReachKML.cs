@@ -7,6 +7,7 @@ using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
+using Newtonsoft.Json;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -15,7 +16,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         private static HelperKMLParse _helperInReach = new HelperKMLParse();
 
         [FunctionName("GetActiveInReachKML")]
-        public static async void Run([TimerTrigger("0 */6 * * * *")] TimerInfo myTimer,
+        public static async void Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
         [CosmosDB(
                 databaseName: "HomeIoTDB",
                 collectionName: "GPSTracks",
@@ -56,13 +57,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             foreach (var item in TracksMetadata)
                 await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
 
-            //Getting inReach active tracking into Today's active track if user setting Active = true
+            //Getting inReach active tracking into Today's active track if user setting Active = true and d1 will be always today's date
             foreach (var user in users)
             {
                 var queryMetadata = new SqlQuerySpec("SELECT c.id, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword  FROM c WHERE c.id = @id",
                     new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrackId } }));
                 KMLInfo item = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryMetadata, new FeedOptions { PartitionKey = new PartitionKey(user.userWebId) }).AsEnumerable().FirstOrDefault();
-
+                item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
                 await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
             }
         }
@@ -91,8 +92,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 {
                     HttpClient client = new HttpClient();
                     Uri SendEmailFunctionUri = new Uri($"https://trackmefunctions.azurewebsites.net/api/SendEmailInReach/{fullTrack.InReachWebAddress}?code={FunctionKey}");
-                    await client.PostAsJsonAsync(SendEmailFunctionUri, new { date = email.Key, inReach = email.Value});
-                }
+                    var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, new { eMailSubject = email.Key, eMailMessage = email.Value });
+                    fullTrack.LasMessage = await returnMessage.Content.ReadAsStringAsync();
+                    }
 
                 await output.AddAsync(fullTrack);
             }

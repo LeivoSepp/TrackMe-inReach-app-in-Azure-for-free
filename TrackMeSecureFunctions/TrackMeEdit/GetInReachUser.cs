@@ -77,8 +77,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 Title = "Today's track",
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
-                InReachWebPassword = LoggedInUser.InReachWebPassword,
-                d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd")
+                InReachWebPassword = LoggedInUser.InReachWebPassword
             };
             HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
             HelperKMLParse _helperInReach = new HelperKMLParse();
