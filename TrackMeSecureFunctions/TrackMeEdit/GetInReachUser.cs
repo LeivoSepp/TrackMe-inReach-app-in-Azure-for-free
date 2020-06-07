@@ -78,8 +78,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
                 InReachWebPassword = LoggedInUser.InReachWebPassword,
-                d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd"),
-                d2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd")
+                d1 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd"),
+                d2 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd")
             };
             HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
             HelperKMLParse _helperInReach = new HelperKMLParse();
@@ -90,10 +90,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //get feed grom garmin
                 var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(TodayTrack);
                 //parse and transform the feed
-                TodayTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, TodayTrack);
+                TodayTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, TodayTrack, new List<Emails>());
                 //add or update the track based on the id
                 await addDocuments.AddAsync(TodayTrack);
             }
+            //delete Today's track
             if (!LoggedInUser.Active)
             {
                 //select document

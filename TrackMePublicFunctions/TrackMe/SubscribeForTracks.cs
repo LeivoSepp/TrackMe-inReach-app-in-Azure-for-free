@@ -44,8 +44,10 @@ namespace TrackMePublicFunctions.TrackMe
 
             if (user.subscibers == null)
             {
-                List<string> newList = new List<string>();
-                newList.Add(email);
+                List<string> newList = new List<string>
+                {
+                    email
+                };
                 user.subscibers = newList;
             }
             else

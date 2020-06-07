@@ -175,7 +175,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public KMLInfo GetAllPlacemarks(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails = default)
+        public KMLInfo GetAllPlacemarks(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails)
         {
             //emails = new List<Emails>();
 
@@ -352,16 +352,18 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         if (styleKeyword.Keywords.Any(eventType.Contains) || styleKeyword.Keywords.Any(textValue.ToLower().Contains))
                             NewPlacemark.XPathSelectElement("//kml:styleUrl", ns).Value = $"#{styleKeyword.StyleName}";
                     }
-                    //if tracking turned on on device then fill out Text field
+                    //if tracking turned on on device then copy Event into Text field
                     if (eventType == inReachEvents[0])
                     {
                         NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value = inReachEvents[0];
                         trackStarted = lastDate;
+                        if (string.IsNullOrEmpty(fullTrack.TrackStartTime))
+                            fullTrack.TrackStartTime = trackStarted.ToString("HH:mm dd.MM.yyyy");
                     }
 
                     var userWebId = fullTrack.groupid.First().ToString().ToUpper() + fullTrack.groupid.Substring(1);
                     var inReachMessage = NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;
-                    lineStringMessage = $"Track started on {trackStarted:HH:mm dd.MM.yyyy}.<br>Total distance traveled { distance} in { totalTimeStr}.";
+                    lineStringMessage = $"Track started on {fullTrack.TrackStartTime}.<br>Total distance traveled { distance} in { totalTimeStr}.";
                     var eMailMessage = $"Hello, <br><br><h3>{userWebId} is on {fullTrack.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
@@ -388,7 +390,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 }
                 else
                 {
-                    //build a linestring, add new coordinates into end of exisitng list
+                    //build a linestring, add new coordinates into end of existing list
                     string NewCoordinates = ReturnValue(xmlTrack.XPathSelectElement("//kml:Placemark/kml:LineString/kml:coordinates", ns));
                     string Coordinates = ReturnValue(xmlLineString.XPathSelectElement("//kml:Placemark/kml:LineString/kml:coordinates", ns));
                     Coordinates = Coordinates + "\r\n" + NewCoordinates;
@@ -417,20 +419,21 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string Title { get; set; }
         public string d1 { get; set; }
         public string d2 { get; set; }
-        public string Track { get; set; }
         public string InReachWebAddress { get; set; }
         public string InReachWebPassword { get; set; }
         public string groupid { get; set; }
         public string _self { get; set; }
-        public string PlacemarksAll { get; set; }
-        public string PlacemarksWithMessages { get; set; }
-        public string LineString { get; set; }
         public string LastPointTimestamp { get; set; }
         public double LastLatitude { get; set; }
         public double LastLongitude { get; set; }
         public double LastTotalDistance { get; set; }
         public string LastTotalTime { get; set; }
+        public string TrackStartTime { get; set; }
         public string LasMessage { get; set; }
+        public string PlannedTrack { get; set; }
+        public string PlacemarksAll { get; set; }
+        public string PlacemarksWithMessages { get; set; }
+        public string LineString { get; set; }
     }
 
 

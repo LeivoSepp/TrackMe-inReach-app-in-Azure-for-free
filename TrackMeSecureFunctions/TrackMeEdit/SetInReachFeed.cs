@@ -95,7 +95,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //get feed grom garmin
                     var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(fullTrack);
                     //parse and transform the feed
-                    fullTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, fullTrack);
+                    fullTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, fullTrack, new List<Emails>());
 
                     //add or update the track based on the id
                     await output.AddAsync(fullTrack);

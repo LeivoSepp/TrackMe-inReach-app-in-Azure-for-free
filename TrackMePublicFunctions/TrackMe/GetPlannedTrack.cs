@@ -8,7 +8,7 @@ namespace TrackMePublicFunctions.TrackMe
 {
     public class PlacemarkTrack
     {
-        public string Track { get; set; }
+        public string PlannedTrack { get; set; }
     }
     public static class GetPlannedTrack
     {
@@ -24,7 +24,7 @@ namespace TrackMePublicFunctions.TrackMe
                 )]
             PlacemarkTrack input)
         {
-            return new OkObjectResult(input.Track);
+            return new OkObjectResult(input.PlannedTrack);
         }
     }
 }

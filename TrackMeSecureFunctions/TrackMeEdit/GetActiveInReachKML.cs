@@ -67,7 +67,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //reset Today's track tracking information and set date = today to download full Today Track
                 if (lastd1 < today && item.id == TodayTrackId)
                 {
-                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+                    item.d1 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd");
                     item.PlacemarksAll = "";
                     item.PlacemarksWithMessages = "";
                     item.LineString = "";
@@ -75,6 +75,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     item.LastLatitude = 0;
                     item.LastTotalDistance = 0;
                     item.LastPointTimestamp = "";
+                    item.TrackStartTime = "";
                     saveForTrackd1 = item.d1;
                 }
                 //getting always only last point from garmin (except if new day with someone's active tracking has started)
@@ -96,7 +97,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 }
             }
 
-            //before sending out emails this LINQ is removing duplicates by DateTime field.
+            //before sending out emails remove all duplicates by DateTime field.
             List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x=>x.First()).ToList() ;
             foreach (var email in emailList)
             {

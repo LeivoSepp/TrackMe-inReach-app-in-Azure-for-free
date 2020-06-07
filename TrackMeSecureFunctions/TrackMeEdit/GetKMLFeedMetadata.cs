@@ -13,7 +13,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string Title { get; set; }
         public string d1 { get; set; }
         public string d2 { get; set; }
-        public string Track { get; set; }
+        public string PlannedTrack { get; set; }
         public string InReachWebAddress { get; set; }
         public string InReachWebPassword { get; set; }
     }
