@@ -49,27 +49,41 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             DateTime localTime = _helperInReach.getLocalTime("FLE Standard Time");
 
             //getting active tracks from cosmos
-            var query = new SqlQuerySpec("SELECT c.id, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE c.d1 < @localtime and c.d2 > @localtime1",
-                new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@localtime", Value = localTime }, new SqlParameter { Name = "@localtime1", Value = localTime.AddDays(-1) } }));
+            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @localtime and c.d2 > @localtime1) or c.id = @TodayTrack",
+                new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@localtime", Value = localTime }, new SqlParameter { Name = "@localtime1", Value = localTime.AddDays(-1) }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
-            //going through all the KMLfeeds to check the timerange 
+            //getting all tracks which are currently active 
             foreach (var item in TracksMetadata)
-                await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
+            {
+                var saved1 = item.d1;
+                DateTime lastd1 = DateTime.Parse(item.d1).ToUniversalTime();
+                DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
+                if (lastd1 > today)
+                    item.d1 = string.Empty;
+                else
+                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
 
-            //Getting inReach active tracking into Today's active track if user setting Active = true and d1 will be always today's date
+                await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
+            }
+            //Getting all Today's active trackings (where user setting Active = true)
             foreach (var user in users)
             {
-                var queryMetadata = new SqlQuerySpec("SELECT c.id, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword  FROM c WHERE c.id = @id",
+                var queryMetadata = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword  FROM c WHERE c.id = @id",
                     new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrackId } }));
                 KMLInfo item = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryMetadata, new FeedOptions { PartitionKey = new PartitionKey(user.userWebId) }).AsEnumerable().FirstOrDefault();
-                item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+                DateTime lastd1 = DateTime.Parse(item.d1).ToUniversalTime();
+                DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
+                if (lastd1 > today)
+                    item.d1 = string.Empty;
+                else
+                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
                 await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
             }
         }
         static async Task ProcessKMLAsync(KMLInfo item, DocumentClient documentClient, IAsyncCollector<KMLInfo> output, Uri collectionUri, string FunctionKey)
         {
-            //getting track from garmin
+            //getting always only last point from garmin (except if new day with someone's active tracking has started)
             HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
             var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
 
