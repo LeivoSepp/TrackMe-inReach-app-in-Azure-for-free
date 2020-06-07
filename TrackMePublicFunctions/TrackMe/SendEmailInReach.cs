@@ -12,6 +12,12 @@ using System.Collections.Generic;
 
 namespace TrackMePublicFunctions.TrackMe
 {
+    public class Emails
+    {
+        public string EmailSubject { get; set; }
+        public string EmailBody { get; set; }
+        public string UserWebId { get; set; }
+    }
     public static class SendEmailInReach
     {
         [FunctionName("SendEmailInReach")]
@@ -30,10 +36,10 @@ namespace TrackMePublicFunctions.TrackMe
             var user = users.First();
 
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            dynamic data = JsonConvert.DeserializeObject(requestBody);
+            var data = JsonConvert.DeserializeObject<Emails>(requestBody);
             
-            string subject = data?.eMailSubject;
-            string messageBody = data?.eMailMessage;
+            string subject = data.EmailSubject;
+            string messageBody = data.EmailBody;
 
             var message = new SendGridMessage();
 

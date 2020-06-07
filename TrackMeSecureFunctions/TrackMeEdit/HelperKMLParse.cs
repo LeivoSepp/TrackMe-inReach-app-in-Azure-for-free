@@ -175,9 +175,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public KMLInfo GetAllPlacemarks(out List<KeyValuePair<string, string>> emails, string kmlFeedresult, KMLInfo fullTrack)
+        public KMLInfo GetAllPlacemarks(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails = default)
         {
-            emails = new List<KeyValuePair<string, string>>();
+            //emails = new List<Emails>();
 
             //open and parse KMLfeed
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
@@ -266,17 +266,16 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             //set placemark as a root element            
             var placemarks = xmlTrack.XPathSelectElements("//kml:Placemark", ns);
 
-            var dateTimeString = string.Empty;
-            string lastLatitude = "0.0";
-            string lastLongitude = "0.0";
-            double totalDistance = 0;
+            double lastLatitude = fullTrack.LastLatitude;
+            double lastLongitude = fullTrack.LastLongitude;
+            double totalDistance = fullTrack.LastTotalDistance;
             TimeSpan totalTime = new TimeSpan();
+            TimeSpan.TryParse(fullTrack.LastTotalTime, out totalTime);
+                
             DateTime lastDate = new DateTime();
-            var distance = string.Empty;
-            var totalTimeStr = string.Empty;
-            var eMailMessage = string.Empty;
             var lineStringMessage = string.Empty;
             DateTime trackStarted = new DateTime();
+            var LastPointTimestamp = string.Empty;
             //iterate through each Placemark
             foreach (var placemark in placemarks)
             {
@@ -296,13 +295,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Longitude']/kml:value", ns).Value;
 
                     //calculate distance
-                    GeoCoordinate pin1 = new GeoCoordinate(double.Parse(thisLatitude, CultureInfo.InvariantCulture), double.Parse(thisLongitude, CultureInfo.InvariantCulture));
-                    GeoCoordinate pin2 = new GeoCoordinate(double.Parse(lastLatitude, CultureInfo.InvariantCulture), double.Parse(lastLongitude, CultureInfo.InvariantCulture));
-                    if (lastLatitude != "0.0" && lastLongitude != "0.0")
+                    double.TryParse(thisLatitude, NumberStyles.Any, CultureInfo.InvariantCulture, out double thisLatitudeDouble);
+                    double.TryParse(thisLongitude, NumberStyles.Any, CultureInfo.InvariantCulture, out double thisLongitudeDouble);
+                    GeoCoordinate pin1 = new GeoCoordinate(thisLatitudeDouble, thisLongitudeDouble);
+                    GeoCoordinate pin2 = new GeoCoordinate(lastLatitude, lastLongitude);
+                    if (lastLatitude > 0 && lastLongitude > 0)
                         totalDistance += pin1.GetDistanceTo(pin2) / 1000;
-                    lastLatitude = thisLatitude;
-                    lastLongitude = thisLongitude;
-                    distance = totalDistance.ToString("0") + " km";
+                    lastLatitude = thisLatitudeDouble;
+                    lastLongitude = thisLongitudeDouble;
+                    var distance = totalDistance.ToString("0") + " km";
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Distance']/kml:value", ns).Value = distance;
 
                     //select Speed element end remove fraction after comma: 12 km/m
@@ -325,16 +326,19 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Elevation']/kml:value", ns).Value = elevation;
 
                     //select Time element and covert
-                    dateTimeString = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value;
+                    var dateTimeString = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value;
                     DateTime dT = DateTime.Parse(dateTimeString, CultureInfo.CreateSpecificCulture("en-US"));
                     dateTimeString = $"{dT:HH:mm dd.MM.yyyy}";
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value = dateTimeString;
+
+                    //select lastpoint timestamp
+                    LastPointTimestamp = placemark.XPathSelectElement("./kml:TimeStamp/kml:when", ns).Value;
 
                     //calculate total time
                     if (lastDate != DateTime.MinValue)
                         totalTime += dT.Subtract(lastDate);
                     lastDate = dT;
-                    totalTimeStr = $"{totalTime:%d} day(s) {totalTime:%h\\:mm}";
+                    var totalTimeStr = $"{totalTime:%d} day(s) {totalTime:%h\\:mm}";
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'TimeElapsed']/kml:value", ns).Value = totalTimeStr;
 
                     //select events and messages
@@ -358,7 +362,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var userWebId = fullTrack.groupid.First().ToString().ToUpper() + fullTrack.groupid.Substring(1);
                     var inReachMessage = NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;
                     lineStringMessage = $"Track started on {trackStarted:HH:mm dd.MM.yyyy}.<br>Total distance traveled { distance} in { totalTimeStr}.";
-                    eMailMessage = $"Hello, <br><br><h3>{userWebId} is on {fullTrack.Title}.</h3>" +
+                    var eMailMessage = $"Hello, <br><br><h3>{userWebId} is on {fullTrack.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
                         $"Follow me on the map <a href='https://trackmefunctions.azurewebsites.net/{fullTrack.groupid}/?id={fullTrack.id}'></a>https://trackmefunctions.azurewebsites.net/{fullTrack.groupid}/<br><br>" +
@@ -375,7 +379,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     {
                         documentPlacemark.Add(NewPlacemark);
                         documentPlacemarkMessages.Add(NewPlacemark);
-                        emails.Add(new KeyValuePair<string, string>(eMailSubject, eMailMessage));
+                        emails.Add(new Emails { EmailBody = eMailMessage, EmailSubject = eMailSubject, UserWebId = fullTrack.groupid, DateTime = dateTimeString });
                     }
                     else
                     {
@@ -393,6 +397,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     xmlLineString.XPathSelectElement("//kml:Placemark/kml:description", ns).Value = lineStringMessage;
                 }
             }
+            fullTrack.LastTotalDistance = totalDistance;
+            fullTrack.LastLatitude = lastLatitude;
+            fullTrack.LastLongitude = lastLongitude;
+            fullTrack.LastTotalTime = totalTime.ToString();
+            fullTrack.LastPointTimestamp = LastPointTimestamp;
+
             fullTrack.PlacemarksAll = xmlString + xmlPlacemarks.ToString();
             fullTrack.PlacemarksWithMessages = xmlString + xmlPlacemarksWithMessages.ToString();
             fullTrack.LineString = xmlString + xmlLineString.ToString();
@@ -416,6 +426,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string PlacemarksWithMessages { get; set; }
         public string LineString { get; set; }
         public string LastPointTimestamp { get; set; }
+        public double LastLatitude { get; set; }
+        public double LastLongitude { get; set; }
+        public double LastTotalDistance { get; set; }
+        public string LastTotalTime { get; set; }
         public string LasMessage { get; set; }
     }
 
@@ -425,5 +439,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string id { get; set; }
         public string InReachWebAddress { get; set; }
         public InReachUser[] InReachUsers { get; set; }
+    }
+    public class Emails
+    {
+        public string EmailSubject { get; set; }
+        public string EmailBody { get; set; }
+        public string UserWebId { get; set; }
+        public string DateTime { get; set; }
     }
 }

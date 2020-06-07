@@ -16,7 +16,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         private static HelperKMLParse _helperInReach = new HelperKMLParse();
 
         [FunctionName("GetActiveInReachKML")]
-        public static async void Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
+        public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
         [CosmosDB(
                 databaseName: "HomeIoTDB",
                 collectionName: "GPSTracks",
@@ -47,70 +47,63 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             string TodayTrackId = "TodayTrack";
 
             DateTime localTime = _helperInReach.getLocalTime("FLE Standard Time");
+            var emails = new List<Emails>();
 
             //getting active tracks from cosmos
-            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @localtime and c.d2 > @localtime1) or c.id = @TodayTrack",
+            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.LastLatitude, c.LastLongitude, c.LastDistance, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @localtime and c.d2 > @localtime1) or c.id = @TodayTrack",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@localtime", Value = localTime }, new SqlParameter { Name = "@localtime1", Value = localTime.AddDays(-1) }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
             //getting all tracks which are currently active 
             foreach (var item in TracksMetadata)
             {
-                var saved1 = item.d1;
+                var saveForTrackd1 = item.d1;
                 DateTime lastd1 = DateTime.Parse(item.d1).ToUniversalTime();
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
-                if (lastd1 > today)
-                    item.d1 = string.Empty;
-                else
-                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
 
-                await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
-            }
-            //Getting all Today's active trackings (where user setting Active = true)
-            foreach (var user in users)
-            {
-                var queryMetadata = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword  FROM c WHERE c.id = @id",
-                    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrackId } }));
-                KMLInfo item = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryMetadata, new FeedOptions { PartitionKey = new PartitionKey(user.userWebId) }).AsEnumerable().FirstOrDefault();
-                DateTime lastd1 = DateTime.Parse(item.d1).ToUniversalTime();
-                DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
-                if (lastd1 > today)
-                    item.d1 = string.Empty;
-                else
-                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
-                await ProcessKMLAsync(item, documentClient, output, collectionUri, FunctionKey);
-            }
-        }
-        static async Task ProcessKMLAsync(KMLInfo item, DocumentClient documentClient, IAsyncCollector<KMLInfo> output, Uri collectionUri, string FunctionKey)
-        {
-            //getting always only last point from garmin (except if new day with someone's active tracking has started)
-            HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
-            var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
+                //clearing d1 to wnload only last point from Garmin
+                item.d1 = string.Empty;
 
-            //if there are new points, then load whole track from database and add the point
-            if (_helperInReach.IsThereNewPoints(kmlFeedresult, item))
-            {
-                var LastPointTimestamp = item.LastPointTimestamp;
-                var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
-                    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
-                KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
-
-                var emails = new List<KeyValuePair<string, string>>();
-
-                //process the full track
-                fullTrack = _helperInReach.GetAllPlacemarks(out emails, kmlFeedresult, fullTrack);
-                fullTrack.LastPointTimestamp = LastPointTimestamp;
-
-                //send out emails
-                foreach (var email in emails)
+                //reset Today's track tracking information and set date = today to download full Today Track
+                if (lastd1 < today && item.id == TodayTrackId)
                 {
-                    HttpClient client = new HttpClient();
-                    Uri SendEmailFunctionUri = new Uri($"https://trackmefunctions.azurewebsites.net/api/SendEmailInReach/{fullTrack.InReachWebAddress}?code={FunctionKey}");
-                    var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, new { eMailSubject = email.Key, eMailMessage = email.Value });
-                    fullTrack.LasMessage = await returnMessage.Content.ReadAsStringAsync();
-                    }
+                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+                    item.PlacemarksAll = "";
+                    item.PlacemarksWithMessages = "";
+                    item.LineString = "";
+                    item.LastLongitude = 0;
+                    item.LastLatitude = 0;
+                    item.LastTotalDistance = 0;
+                    item.LastPointTimestamp = "";
+                    saveForTrackd1 = item.d1;
+                }
+                //getting always only last point from garmin (except if new day with someone's active tracking has started)
+                HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
+                var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
 
-                await output.AddAsync(fullTrack);
+                //if there are new points, then load whole track from database and add the point
+                if (_helperInReach.IsThereNewPoints(kmlFeedresult, item))
+                {
+                    var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
+                        new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
+                    KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
+
+                    //process the full track
+                    fullTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, fullTrack, emails);
+                    //adding back d1 as it was removed
+                    fullTrack.d1 = saveForTrackd1;
+                    await output.AddAsync(fullTrack);
+                }
+            }
+
+            //before sending out emails this LINQ is removing duplicates by DateTime field.
+            List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x=>x.First()).ToList() ;
+            foreach (var email in emailList)
+            {
+                HttpClient client = new HttpClient();
+                Uri SendEmailFunctionUri = new Uri($"https://trackmefunctions.azurewebsites.net/api/SendEmailInReach/{email.UserWebId}?code={FunctionKey}");
+                var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, email);
+                var lastMessage = await returnMessage.Content.ReadAsStringAsync();
             }
         }
     }
