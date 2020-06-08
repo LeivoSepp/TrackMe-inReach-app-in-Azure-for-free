@@ -5,14 +5,14 @@
         "methods": [ "GET" ],
         "route": "/"
       },
-      "backendUri": "https://trackme.z6.web.core.windows.net/"
+      "backendUri": "https://trackme.z6.web.core.windows.net"
     },
     "static": {
       "matchCondition": {
         "methods": [ "GET" ],
         "route": "/{path}"
       },
-      "backendUri": "https://trackme.z6.web.core.windows.net/"
+      "backendUri": "https://trackme.z6.web.core.windows.net"
     },
     "css": {
       "matchCondition": {
