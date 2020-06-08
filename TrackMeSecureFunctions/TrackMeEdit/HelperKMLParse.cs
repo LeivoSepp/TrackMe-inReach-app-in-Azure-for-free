@@ -39,7 +39,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             return directions[index];
         }
         //inReach default events
-        static List<string> inReachEvents = new List<string>()
+        static List<string> InReachEvents = new List<string>()
         {
             "Tracking turned on from device.",
             "Quick Text to MapShare received",
@@ -61,12 +61,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             public string LogoName;
             public List<string> Keywords = new List<string>();
         }
-        List<StyleKeyword> styleKeywords = new List<StyleKeyword>()
+        List<StyleKeyword> StyleKeywords = new List<StyleKeyword>()
         {
             new StyleKeyword("trackingStarted", "hiker.png",
-                new List<string>{inReachEvents[0]}),
+                new List<string>{ InReachEvents[0]}),
             new StyleKeyword("messageReceived", "post_office.png",
-                new List<string>{inReachEvents[1], inReachEvents[2] }),
+                new List<string>{ InReachEvents[1], InReachEvents[2] }),
             new StyleKeyword("campStyle", "campground.png",
                 new List<string>{"camp", "laager", "telk" }),
             new StyleKeyword("finishStyle", "parking_lot.png",
@@ -107,14 +107,14 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 AddKMLStyle(Document, defaultns, i.ToString(), newBalloon, iconUrl);
             }
             //add additional style elements for each predefined keyword
-            foreach (var styleKeyword in styleKeywords)
+            foreach (var styleKeyword in StyleKeywords)
             {
                 AddKMLStyle(Document, defaultns, styleKeyword.StyleName, newBalloon, "http://maps.google.com/mapfiles/kml/shapes/" + styleKeyword.LogoName);
             }
             return Document;
         }
         //get server-based date-time and calculate it to specific timezone
-        public DateTime getLocalTime(string timezone)
+        public DateTime GetLocalTime(string timezone)
         {
             //timezone: "FLE Standard Time"
             var TimezoneCorrected = TimeZoneInfo.FindSystemTimeZoneById(timezone);
@@ -175,10 +175,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public KMLInfo GetAllPlacemarks(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails)
+        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails)
         {
-            //emails = new List<Emails>();
-
             //open and parse KMLfeed
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
             XmlNamespaceManager ns = new XmlNamespaceManager(new NameTable());
@@ -299,7 +297,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     double.TryParse(thisLongitude, NumberStyles.Any, CultureInfo.InvariantCulture, out double thisLongitudeDouble);
                     GeoCoordinate pin1 = new GeoCoordinate(thisLatitudeDouble, thisLongitudeDouble);
                     GeoCoordinate pin2 = new GeoCoordinate(lastLatitude, lastLongitude);
-                    if (lastLatitude > 0 && lastLongitude > 0)
+                    if (lastLatitude != 0 && lastLongitude != 0)
                         totalDistance += pin1.GetDistanceTo(pin2) / 1000;
                     lastLatitude = thisLatitudeDouble;
                     lastLongitude = thisLongitudeDouble;
@@ -347,15 +345,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value = textValue;
 
                     //check if the eventType or receivedText contains keywords, if yes, then attach the style to the placemark
-                    foreach (var styleKeyword in styleKeywords)
+                    foreach (var styleKeyword in StyleKeywords)
                     {
                         if (styleKeyword.Keywords.Any(eventType.Contains) || styleKeyword.Keywords.Any(textValue.ToLower().Contains))
                             NewPlacemark.XPathSelectElement("//kml:styleUrl", ns).Value = $"#{styleKeyword.StyleName}";
                     }
                     //if tracking turned on on device then copy Event into Text field
-                    if (eventType == inReachEvents[0])
+                    if (eventType == InReachEvents[0])
                     {
-                        NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value = inReachEvents[0];
+                        NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value = InReachEvents[0];
                         trackStarted = lastDate;
                         if (string.IsNullOrEmpty(fullTrack.TrackStartTime))
                             fullTrack.TrackStartTime = trackStarted.ToString("HH:mm dd.MM.yyyy");
@@ -377,7 +375,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
                     var eMailSubject = $"{userWebId} at {lastDate:HH:mm}: {inReachMessage}";
                     //check if the eventType is one from the list of predefined messages
-                    if (inReachEvents.Any(eventType.Contains))
+                    if (InReachEvents.Any(eventType.Contains))
                     {
                         documentPlacemark.Add(NewPlacemark);
                         documentPlacemarkMessages.Add(NewPlacemark);
@@ -409,7 +407,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             fullTrack.PlacemarksWithMessages = xmlString + xmlPlacemarksWithMessages.ToString();
             fullTrack.LineString = xmlString + xmlLineString.ToString();
 
-            return fullTrack;
+            return true;
         }
     }
 
@@ -422,7 +420,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string InReachWebAddress { get; set; }
         public string InReachWebPassword { get; set; }
         public string groupid { get; set; }
-        public string _self { get; set; }
+        public int UserTimezone { get; set; }
         public string LastPointTimestamp { get; set; }
         public double LastLatitude { get; set; }
         public double LastLongitude { get; set; }
@@ -434,6 +432,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string PlacemarksAll { get; set; }
         public string PlacemarksWithMessages { get; set; }
         public string LineString { get; set; }
+        public string _self { get; set; }
     }
 
 

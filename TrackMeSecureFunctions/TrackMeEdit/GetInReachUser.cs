@@ -63,6 +63,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     LoggedInUser.InReachWebPassword = userDataFromWeb.InReachWebPassword;
                     LoggedInUser.userWebId = userDataFromWeb.userWebId;
                     LoggedInUser.Active = userDataFromWeb.Active;
+                    LoggedInUser.UserTimezone = userDataFromWeb.UserTimezone;
                     await ManageTodayTrack(LoggedInUser, addDocuments, client, collectionUri);
                 }
                 await output.AddAsync(LoggedInUser);
@@ -78,19 +79,20 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
                 InReachWebPassword = LoggedInUser.InReachWebPassword,
-                d1 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd"),
-                d2 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd")
+                d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd"),
+                d2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd"),
+                UserTimezone = LoggedInUser.UserTimezone
             };
-            HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
-            HelperKMLParse _helperInReach = new HelperKMLParse();
+            HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
+            HelperKMLParse helperKMLParse = new HelperKMLParse();
 
             //create Today's track
             if (LoggedInUser.Active)
             {
                 //get feed grom garmin
-                var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(TodayTrack);
+                var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
                 //parse and transform the feed
-                TodayTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, TodayTrack, new List<Emails>());
+                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, new List<Emails>());
                 //add or update the track based on the id
                 await addDocuments.AddAsync(TodayTrack);
             }
@@ -121,16 +123,17 @@ namespace TrackMeSecureFunctions.TrackMeEdit
     }
     public class InReachUser
     {
-        public string InReachWebAddress { get; set; }
-        public string InReachWebPassword { get; set; }
-        public string email { get; set; }
+        public string id { get; set; }
         public string name { get; set; }
+        public string email { get; set; }
         public string userWebId { get; set; }
         public bool Active { get; set; }
-        public string id { get; set; }
-        public string groupid { get; set; }
+        public string InReachWebAddress { get; set; }
+        public string InReachWebPassword { get; set; }
+        public int UserTimezone { get; set; }
         public string[] subscibers { get; set; }
         public string status { get; set; }
+        public string groupid { get; set; }
     }
     public class Status
     {

@@ -10,7 +10,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
     {
         public async Task<string> GetKMLAsync(KMLInfo getTrack)
         {
-            string userUrl = $"{getTrack.InReachWebAddress}{CreateDateParameter(getTrack.d1, "d1")}{CreateDateParameter(getTrack.d2, "d2")}";
+            string userUrl = $"{getTrack.InReachWebAddress}{CreateDateParameter(getTrack.d1, "d1", getTrack.UserTimezone)}{CreateDateParameter(getTrack.d2, "d2", getTrack.UserTimezone)}";
             string garminUrl = $"https://share.garmin.com/Feed/Share/{userUrl}";
 
             //get the data from garmin based on start date in every 5 minutes
@@ -20,17 +20,16 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             HttpResponseMessage response = http.GetAsync(garminUrl).Result;
             return await response.Content.ReadAsStringAsync();
         }
-        string CreateDateParameter(string dateTime, string param)
+        string CreateDateParameter(string dateTime, string param, int UserTimezone)
         {
-            var date = string.Empty;
             //add one day into date, required for garmin query
             if (!string.IsNullOrEmpty(dateTime))
             {
-                DateTime dT = DateTime.Parse(dateTime);
+                DateTime dT = DateTime.Parse(dateTime).ToUniversalTime().AddHours(UserTimezone);
                 if (param == "d2")
                 {
                     dT = dT.AddDays(1);
-                    return $"&{param}={dT:yyyy-MM-dd}";
+                    return $"&{param}={dT:o}";
                 }
                 if (param == "d1")
                     return $"?{param}={dT:o}";

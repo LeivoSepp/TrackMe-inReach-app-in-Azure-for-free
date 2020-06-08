@@ -16,7 +16,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 {
     public static class SetInReachFeed
     {
-        private static HelperKMLParse _helperInReach = new HelperKMLParse();
+        private static HelperKMLParse helperKMLParse = new HelperKMLParse();
 
         //this function will remove all weird characters from the id field
         public static string UrlEncode(string value)
@@ -81,21 +81,25 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 {
                     var fullTrack = JsonConvert.DeserializeObject<KMLInfo>(requestBody);
                     fullTrack.groupid = LoggedInUser.userWebId;
-                    
+
                     //1. replace ö->o ä->a etc
                     //2. first: UrlEncode is removing all weird charactes and spaces
                     //3. second: HttpUtility.UrlEncode is removing some not named weird characters, just in case
                     //4. third: UrlEncode again is removing possible %-marks
-                    string id = RemoveDiacritics(fullTrack.id);
-                    id = UrlEncode(HttpUtility.UrlEncode(UrlEncode(id)));
-                    fullTrack.id = id;
+                    //setting id field only on initial track creation
+                    if (string.IsNullOrEmpty(fullTrack.id))
+                    {
+                        string id = RemoveDiacritics(fullTrack.Title);
+                        id = UrlEncode(HttpUtility.UrlEncode(UrlEncode(id)));
+                        fullTrack.id = id;
+                    }
                     fullTrack.LastPointTimestamp = "";
 
-                    HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
+                    HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
                     //get feed grom garmin
-                    var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(fullTrack);
+                    var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(fullTrack);
                     //parse and transform the feed
-                    fullTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, fullTrack, new List<Emails>());
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, new List<Emails>());
 
                     //add or update the track based on the id
                     await output.AddAsync(fullTrack);

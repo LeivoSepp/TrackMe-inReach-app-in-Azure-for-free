@@ -13,7 +13,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 {
     public static class GetActiveInReachKML
     {
-        private static HelperKMLParse _helperInReach = new HelperKMLParse();
+        private static HelperKMLParse helperKMLParse = new HelperKMLParse();
 
         [FunctionName("GetActiveInReachKML")]
         public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
@@ -23,12 +23,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 ConnectionStringSetting = "CosmosDBConnection"
                 )]
              IAsyncCollector<KMLInfo> output,
-            [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
-                SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user' and c.Active = true"
-                )] IEnumerable<InReachUser> users,
            [CosmosDB(
                 databaseName: "HomeIoTDB",
                 collectionName: "GPSTracks",
@@ -45,29 +39,28 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
             string TodayTrackId = "TodayTrack";
-
-            DateTime localTime = _helperInReach.getLocalTime("FLE Standard Time");
             var emails = new List<Emails>();
 
+            DateTime localTime = helperKMLParse.GetLocalTime("FLE Standard Time");
+
             //getting active tracks from cosmos
-            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.LastPointTimestamp, c.LastLatitude, c.LastLongitude, c.LastDistance, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @localtime and c.d2 > @localtime1) or c.id = @TodayTrack",
+            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.UserTimezone, c.LastPointTimestamp, c.LastLatitude, c.LastLongitude, c.LastDistance, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @localtime and c.d2 > @localtime1) or c.id = @TodayTrack",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@localtime", Value = localTime }, new SqlParameter { Name = "@localtime1", Value = localTime.AddDays(-1) }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
             //getting all tracks which are currently active 
             foreach (var item in TracksMetadata)
             {
+                //saving and clearing d1 to download only last point from Garmin
                 var saveForTrackd1 = item.d1;
+                item.d1 = string.Empty;
+                
                 DateTime lastd1 = DateTime.Parse(item.d1).ToUniversalTime();
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
-
-                //clearing d1 to wnload only last point from Garmin
-                item.d1 = string.Empty;
-
                 //reset Today's track tracking information and set date = today to download full Today Track
                 if (lastd1 < today && item.id == TodayTrackId)
                 {
-                    item.d1 = DateTime.UtcNow.ToUniversalTime().AddHours(3).ToString("yyyy-MM-dd");
+                    item.d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
                     item.PlacemarksAll = "";
                     item.PlacemarksWithMessages = "";
                     item.LineString = "";
@@ -83,15 +76,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
 
                 //if there are new points, then load whole track from database and add the point
-                if (_helperInReach.IsThereNewPoints(kmlFeedresult, item))
+                if (helperKMLParse.IsThereNewPoints(kmlFeedresult, item))
                 {
                     var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
                         new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
                     KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
 
                     //process the full track
-                    fullTrack = _helperInReach.GetAllPlacemarks(kmlFeedresult, fullTrack, emails);
-                    //adding back d1 as it was removed
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails);
+                    //restore d1 as it was removed initially
                     fullTrack.d1 = saveForTrackd1;
                     await output.AddAsync(fullTrack);
                 }
