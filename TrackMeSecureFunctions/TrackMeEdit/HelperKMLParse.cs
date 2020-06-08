@@ -175,7 +175,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails)
+        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails, string webSiteUrl = "")
         {
             //open and parse KMLfeed
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
@@ -365,13 +365,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var eMailMessage = $"Hello, <br><br><h3>{userWebId} is on {fullTrack.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
-                        $"Follow me on the map <a href='https://trackmefunctions.azurewebsites.net/{fullTrack.groupid}/?id={fullTrack.id}'></a>https://trackmefunctions.azurewebsites.net/{fullTrack.groupid}/<br><br>" +
+                        $"Follow me on the map <a href='{webSiteUrl}{fullTrack.groupid}/?id={fullTrack.id}'></a>{webSiteUrl}{fullTrack.groupid}/<br><br>" +
                         $"This message was sent in {lastDate:HH:mm dd.MM.yyyy}, at location LatLon: {lastLatitude}, {lastLongitude}. " +
                         $"<a href='https://www.google.com/maps/search/?api=1&query={lastLatitude},{lastLongitude}'>Open in google maps</a>.<br><br>" +
                         $"Best regards,<br>Whoever is carrying this device.<br><br>" +
                         $"<small>Disclaimer<br>" +
                         $"You are getting this e-mail because you subscribed to receive {userWebId} messages.<br>" +
-                        $"Click here to unsubscribe:<a href='https://trackmefunctions.azurewebsites.net/unsubscribe/?userWebId={fullTrack.groupid}'>Remove me from {userWebId} notifications</a>.<br>" +
+                        $"Click here to unsubscribe:<a href='{webSiteUrl}unsubscribe/?userWebId={fullTrack.groupid}'>Remove me from {userWebId} notifications</a>.<br>" +
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
                     var eMailSubject = $"{userWebId} at {lastDate:HH:mm}: {inReachMessage}";
                     //check if the eventType is one from the list of predefined messages

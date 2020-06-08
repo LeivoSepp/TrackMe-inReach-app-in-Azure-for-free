@@ -35,7 +35,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
                 .AddEnvironmentVariables()
                 .Build();
-            var FunctionKey = config["SendEmailInReachFunctionKey"];
+            var SendEmailFunctionKey = config["SendEmailInReachFunctionKey"];
+            var SendEmailFunctionUrl = config["SendEmailFunctionUrl"];
+            var WebSiteUrl = config["WebSiteUrl"];
+        //https://trackmefunctions.azurewebsites.net/api/SendEmailInReach/
+        //https://trackmefunctions.azurewebsites.net/
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
             string TodayTrackId = "TodayTrack";
@@ -83,7 +87,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
 
                     //process the full track
-                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails);
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
                     //restore d1 as it was removed initially
                     fullTrack.d1 = saveForTrackd1;
                     await output.AddAsync(fullTrack);
@@ -95,7 +99,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             foreach (var email in emailList)
             {
                 HttpClient client = new HttpClient();
-                Uri SendEmailFunctionUri = new Uri($"https://trackmefunctions.azurewebsites.net/api/SendEmailInReach/{email.UserWebId}?code={FunctionKey}");
+                Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}{email.UserWebId}?code={SendEmailFunctionKey}");
                 var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, email);
                 var lastMessage = await returnMessage.Content.ReadAsStringAsync();
             }
