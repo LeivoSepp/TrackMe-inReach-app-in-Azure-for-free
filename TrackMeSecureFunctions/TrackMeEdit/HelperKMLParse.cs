@@ -326,8 +326,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //select Time element and covert
                     var dateTimeString = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value;
                     DateTime dT = DateTime.Parse(dateTimeString, CultureInfo.CreateSpecificCulture("en-US"));
-                    dateTimeString = $"{dT:HH:mm dd.MM.yyyy}";
-                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value = dateTimeString;
+                    var dateTimeToPlacemark = $"{dT:HH:mm dd.MM.yyyy}";
+                    NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value = dateTimeToPlacemark;
 
                     //select lastpoint timestamp
                     LastPointTimestamp = placemark.XPathSelectElement("./kml:TimeStamp/kml:when", ns).Value;

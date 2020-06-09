@@ -38,9 +38,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var SendEmailFunctionKey = config["SendEmailInReachFunctionKey"];
             var SendEmailFunctionUrl = config["SendEmailFunctionUrl"];
             var WebSiteUrl = config["WebSiteUrl"];
+            var TodayTrackId = config["TodayTrackId"];
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
-            string TodayTrackId = "TodayTrack";
+            //string TodayTrackId = "TodayTrack";
             var emails = new List<Emails>();
 
             DateTime dateTimeUTC = DateTime.UtcNow.ToUniversalTime();

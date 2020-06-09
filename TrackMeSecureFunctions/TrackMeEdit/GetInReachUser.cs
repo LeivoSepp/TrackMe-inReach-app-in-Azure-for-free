@@ -11,6 +11,8 @@ using Newtonsoft.Json;
 using Microsoft.Azure.Documents.Client;
 using System.Linq;
 using Microsoft.Azure.Documents;
+using Microsoft.Extensions.Configuration;
+using System.Net.Http;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -40,8 +42,20 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection"
                 )]
-            IAsyncCollector<KMLInfo> addDocuments)
+            IAsyncCollector<KMLInfo> addDocuments,
+            ExecutionContext context
+            )
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(context.FunctionAppDirectory)
+                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
+            var SendEmailFunctionKey = config["SendEmailInReachFunctionKey"];
+            var SendEmailFunctionUrl = config["SendEmailFunctionUrl"];
+            var WebSiteUrl = config["WebSiteUrl"];
+            var TodayTrackId = config["TodayTrackId"];
+
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
@@ -64,13 +78,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     LoggedInUser.userWebId = userDataFromWeb.userWebId;
                     LoggedInUser.Active = userDataFromWeb.Active;
                     LoggedInUser.UserTimezone = userDataFromWeb.UserTimezone;
-                    await ManageTodayTrack(LoggedInUser, addDocuments, client, collectionUri);
+                    await ManageTodayTrack(LoggedInUser, addDocuments, client, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl);
                 }
                 await output.AddAsync(LoggedInUser);
             }
             return new OkObjectResult(LoggedInUser);
         }
-        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri)
+        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string TodayTrackId, string SendEmailFunctionUrl, string SendEmailFunctionKey, string WebSiteUrl)
         {
             var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
             var dated2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
@@ -79,7 +93,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
             KMLInfo TodayTrack = new KMLInfo()
             {
-                id = "TodayTrack",
+                id = TodayTrackId,
                 Title = "Today's track",
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
@@ -94,11 +108,23 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             //create Today's track
             if (LoggedInUser.Active)
             {
+                var emails = new List<Emails>();
                 //get feed grom garmin
                 var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
                 //parse and transform the feed and save to database
-                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, new List<Emails>());
+                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, WebSiteUrl);
                 await addDocuments.AddAsync(TodayTrack);
+
+                //before sending out emails remove all duplicates by DateTime field.
+                List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
+                foreach (var email in emailList)
+                {
+                    HttpClient httpClient = new HttpClient();
+                    Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}{email.UserWebId}?code={SendEmailFunctionKey}");
+                    var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, email);
+                    var lastMessage = await returnMessage.Content.ReadAsStringAsync();
+                }
+
             }
             //delete Today's track
             if (!LoggedInUser.Active)
