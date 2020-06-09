@@ -13,6 +13,7 @@ using System.Linq;
 using Microsoft.Azure.Documents;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
+using Microsoft.Azure.Documents.SystemFunctions;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -102,12 +103,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 d2 = dateTimed2,
                 UserTimezone = LoggedInUser.UserTimezone
             };
-            HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
-            HelperKMLParse helperKMLParse = new HelperKMLParse();
-
             //create Today's track
             if (LoggedInUser.Active)
             {
+                HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
+                HelperKMLParse helperKMLParse = new HelperKMLParse();
+
                 var emails = new List<Emails>();
                 //get feed grom garmin
                 var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
@@ -115,7 +116,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, WebSiteUrl);
                 await addDocuments.AddAsync(TodayTrack);
 
-                //before sending out emails remove all duplicates by DateTime field.
+                //before sending out emails remove all duplicates by DateTime field. There shouldnt be duplicates.
                 List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
                 foreach (var email in emailList)
                 {
@@ -124,7 +125,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, email);
                     var lastMessage = await returnMessage.Content.ReadAsStringAsync();
                 }
-
             }
             //delete Today's track
             if (!LoggedInUser.Active)
@@ -133,7 +133,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 var queryOne = new SqlQuerySpec("SELECT c._self, c.groupid FROM c WHERE c.id = @id",
                     new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrack.id } }));
                 Document trackItem = client.CreateDocumentQuery(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) }).AsEnumerable().FirstOrDefault();
-                await client.DeleteDocumentAsync(trackItem.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) });
+                if (!(trackItem is null))
+                    await client.DeleteDocumentAsync(trackItem.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) });
             }
         }
         static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri)
