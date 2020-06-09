@@ -25,17 +25,17 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "GetKMLFeedMetadata/{GroupId}/{id}")] HttpRequest req,
             string GroupId,
              [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]
             KMLmetadata input,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
             )] IEnumerable<InReachUser> users)
         {

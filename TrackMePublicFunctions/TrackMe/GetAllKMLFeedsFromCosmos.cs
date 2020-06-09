@@ -13,9 +13,9 @@ namespace TrackMePublicFunctions.TrackMe
         public static IActionResult Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "GetAllKMLFeedsFromCosmos/{userWebId}")] HttpRequest req,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT c.id, c.Title, c.d1, c.d2 FROM c WHERE c.groupid = {userWebId} ORDER BY c.d1 DESC"
                 )]
                 JArray input

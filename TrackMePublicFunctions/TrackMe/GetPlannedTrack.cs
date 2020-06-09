@@ -16,9 +16,9 @@ namespace TrackMePublicFunctions.TrackMe
         public static IActionResult Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "GetPlannedTrack/{GroupId}/{id}")] HttpRequest req,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]

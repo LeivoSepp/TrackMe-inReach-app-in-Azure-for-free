@@ -23,25 +23,25 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
             )] IEnumerable<InReachUser> users,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
             )] IAsyncCollector<InReachUser> output,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
            )] DocumentClient client,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
                 )]
             IAsyncCollector<KMLInfo> addDocuments,
             ExecutionContext context
@@ -57,7 +57,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var WebSiteUrl = config["WebSiteUrl"];
             var TodayTrackId = config["TodayTrackId"];
 
-            Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
+            Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
             var LoggedInUser = checkUser.LoggedInUser(users, Identities);
@@ -146,7 +146,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             {
                 item.groupid = newUserWebId;
                 await addDocuments.AddAsync(item);
-                await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
+                //await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
             }
         }
     }

@@ -28,15 +28,15 @@ namespace TrackMePublicFunctions.TrackMe
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = "SubscribeForTracks/{userWebId}/{email}")] HttpRequest req,
             string email,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user' and c.userWebId = {userWebId}"
             )] IEnumerable<InReachUser> users,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
             )] IAsyncCollector<InReachUser> output
             )
         {

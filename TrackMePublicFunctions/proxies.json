@@ -27,6 +27,21 @@
         "route": "/animenu.js"
       },
       "backendUri": "https://trackme.z6.web.core.windows.net/animenu.js"
+    },
+    "css1": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "style.css"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/style.css"
+    },
+    "js1": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "animenu.js"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/animenu.js"
     }
+
   }
 }

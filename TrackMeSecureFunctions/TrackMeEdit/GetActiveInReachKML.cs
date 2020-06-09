@@ -18,15 +18,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         [FunctionName("GetActiveInReachKML")]
         public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
         [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
                 )]
              IAsyncCollector<KMLInfo> output,
            [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
            )] DocumentClient documentClient,
             ExecutionContext context)
         {
@@ -40,7 +40,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var WebSiteUrl = config["WebSiteUrl"];
             var TodayTrackId = config["TodayTrackId"];
 
-            Uri collectionUri = UriFactory.CreateDocumentCollectionUri("HomeIoTDB", "GPSTracks");
+            Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             //string TodayTrackId = "TodayTrack";
             var emails = new List<Emails>();
 

@@ -21,22 +21,22 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "DeleteInReachFeedFromCosmos/{userWebId}/{trackId}")] HttpRequest req,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 PartitionKey = "{userWebId}",
                 Id = "{trackId}"
                 )] Document_self document,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection",
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
             )] IEnumerable<InReachUser> users,
             [CosmosDB(
-                databaseName: "HomeIoTDB",
-                collectionName: "GPSTracks",
-                ConnectionStringSetting = "CosmosDBConnection"
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree"
             )] DocumentClient client)
         {
             ClaimsPrincipal Identities = req.HttpContext.User;
