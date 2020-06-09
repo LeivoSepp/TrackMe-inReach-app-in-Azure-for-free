@@ -22,8 +22,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public static string UrlEncode(string value)
         {
             string reservedCharacters = " -!*'();:@&=+$,/?%#[]€£${}._~Ž^§½<>|";
-            if (String.IsNullOrEmpty(value))
-                return String.Empty;
+            if (string.IsNullOrEmpty(value))
+                return string.Empty;
 
             var sb = new StringBuilder();
 
@@ -36,14 +36,14 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         }
         //this function replace all special characters to the closest unicode character
         //for example: ä->a õ->o etc
-        public static String RemoveDiacritics(String s)
+        public static string RemoveDiacritics(string s)
         {
-            String normalizedString = s.Normalize(NormalizationForm.FormD);
+            string normalizedString = s.Normalize(NormalizationForm.FormD);
             StringBuilder stringBuilder = new StringBuilder();
 
             for (int i = 0; i < normalizedString.Length; i++)
             {
-                Char c = normalizedString[i];
+                char c = normalizedString[i];
                 if (CharUnicodeInfo.GetUnicodeCategory(c) != UnicodeCategory.NonSpacingMark)
                     stringBuilder.Append(c);
             }
@@ -95,13 +95,14 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     }
                     fullTrack.LastPointTimestamp = "";
 
+                    fullTrack.d1 = DateTime.Parse(fullTrack.d1).AddHours(-fullTrack.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    fullTrack.d2 = DateTime.Parse(fullTrack.d2).AddDays(1).AddHours(-fullTrack.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+
                     HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
                     //get feed grom garmin
                     var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(fullTrack);
-                    //parse and transform the feed
+                    //parse and transform the feed and save to database
                     helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, new List<Emails>());
-
-                    //add or update the track based on the id
                     await output.AddAsync(fullTrack);
                 }
             }

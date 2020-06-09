@@ -72,6 +72,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         }
         static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri)
         {
+            var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+            var dated2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+            var dateTimed1 = DateTime.Parse(dated1).AddHours(-LoggedInUser.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+            var dateTimed2 = DateTime.Parse(dated2).AddDays(1).AddHours(-LoggedInUser.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+
             KMLInfo TodayTrack = new KMLInfo()
             {
                 id = "TodayTrack",
@@ -79,8 +84,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
                 InReachWebPassword = LoggedInUser.InReachWebPassword,
-                d1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd"),
-                d2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd"),
+                d1 = dateTimed1,
+                d2 = dateTimed2,
                 UserTimezone = LoggedInUser.UserTimezone
             };
             HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
@@ -91,20 +96,18 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             {
                 //get feed grom garmin
                 var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
-                //parse and transform the feed
+                //parse and transform the feed and save to database
                 helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, new List<Emails>());
-                //add or update the track based on the id
                 await addDocuments.AddAsync(TodayTrack);
             }
             //delete Today's track
             if (!LoggedInUser.Active)
             {
-                //select document
+                //select and delete document
                 var queryOne = new SqlQuerySpec("SELECT c._self, c.groupid FROM c WHERE c.id = @id",
                     new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrack.id } }));
-                KMLInfo trackItem = client.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) }).AsEnumerable().FirstOrDefault();
-                //delete document
-                await client.DeleteDocumentAsync(trackItem._self, new RequestOptions { PartitionKey = new PartitionKey(trackItem.groupid) });
+                Document trackItem = client.CreateDocumentQuery(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) }).AsEnumerable().FirstOrDefault();
+                await client.DeleteDocumentAsync(trackItem.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) });
             }
         }
         static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri)
