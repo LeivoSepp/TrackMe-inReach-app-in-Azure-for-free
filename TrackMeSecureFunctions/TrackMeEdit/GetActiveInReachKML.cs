@@ -59,7 +59,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //saving d1 to restore it later
                 var saveForTrackd1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 //set d1 to LastPointTimestamp (if exist) to download the feed from that point from Garmin
-                if(!string.IsNullOrEmpty(item.LastPointTimestamp))
+                if (!string.IsNullOrEmpty(item.LastPointTimestamp))
                     item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 else
                     item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -95,21 +95,20 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
                     //restore d1 as it was removed initially
                     fullTrack.d1 = saveForTrackd1;
-                    if(fullTrack.id == TodayTrackId)
+                    if (fullTrack.id == TodayTrackId)
                         fullTrack.d2 = DateTime.Parse(fullTrack.d1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    else 
+                    else
                         fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     await output.AddAsync(fullTrack);
                 }
             }
 
-            //before sending out emails remove all duplicates by DateTime field.
-            List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x=>x.First()).ToList() ;
-            foreach (var email in emailList)
+            //sending out emails
+            if (emails.Any())
             {
                 HttpClient client = new HttpClient();
-                Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}{email.UserWebId}?code={SendEmailFunctionKey}");
-                var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, email);
+                Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
+                var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emails);
                 var lastMessage = await returnMessage.Content.ReadAsStringAsync();
             }
         }

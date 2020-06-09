@@ -9,6 +9,7 @@ using Newtonsoft.Json;
 using SendGrid.Helpers.Mail;
 using System.Linq;
 using System.Collections.Generic;
+using Microsoft.Azure.Documents;
 
 namespace TrackMePublicFunctions.TrackMe
 {
@@ -17,43 +18,42 @@ namespace TrackMePublicFunctions.TrackMe
         public string EmailSubject { get; set; }
         public string EmailBody { get; set; }
         public string UserWebId { get; set; }
+        public string DateTime { get; set; }
     }
     public static class SendEmailInReach
     {
         [FunctionName("SendEmailInReach")]
         public static async Task<IActionResult> Run(
-            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = "SendEmailInReach/{userWebId}")] HttpRequest req,
+            [HttpTrigger(AuthorizationLevel.Function, "get", "post", Route = null)] HttpRequest req,
             [CosmosDB(
                 databaseName: "HomeIoTDB",
                 collectionName: "GPSTracks",
                 ConnectionStringSetting = "CosmosDBConnection",
-                SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user' and c.userWebId = {userWebId}"
+                SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
                 )] IEnumerable<InReachUser> users,
-
             [SendGrid(ApiKey = "SendGridAPIKey")] IAsyncCollector<SendGridMessage> messageCollector
             )
         {
-            var user = users.First();
-
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
-            var data = JsonConvert.DeserializeObject<Emails>(requestBody);
+            List<Emails> emails = JsonConvert.DeserializeObject<List<Emails>>(requestBody);
             
-            string subject = data.EmailSubject;
-            string messageBody = data.EmailBody;
+            //remove all duplicates by DateTime field.
+            List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
+            foreach (var email in emailList)
+            {
+                var message = new SendGridMessage();
+                InReachUser user = users.First(x => x.userWebId == email.UserWebId);
+                var emailSubscribers = user.subscibers.Select(x => new EmailAddress(x)).ToList();
 
-            var message = new SendGridMessage();
+                message.AddTo(user.email, user.name);
+                message.AddBccs(emailSubscribers);
+                message.SetFrom(user.email, user.name);
 
-            var emailSubscribers = user.subscibers.Select(x => new EmailAddress(x)).ToList();
-            
-            message.AddTo(user.email, user.name);
-            message.AddBccs(emailSubscribers);
-            message.SetFrom(user.email, user.name);
-
-            message.AddContent("text/html", messageBody);
-            message.SetSubject(subject);
-            await messageCollector.AddAsync(message);
-
-            return new OkObjectResult(message);
+                message.AddContent("text/html", email.EmailBody);
+                message.SetSubject(email.EmailSubject);
+                await messageCollector.AddAsync(message);
+            }
+            return new OkObjectResult("OK");
         }
     }
 }

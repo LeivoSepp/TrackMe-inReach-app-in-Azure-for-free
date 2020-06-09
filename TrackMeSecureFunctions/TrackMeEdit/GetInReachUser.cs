@@ -116,13 +116,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, WebSiteUrl);
                 await addDocuments.AddAsync(TodayTrack);
 
-                //before sending out emails remove all duplicates by DateTime field. There shouldnt be duplicates.
-                List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
-                foreach (var email in emailList)
+                //sending out emails
+                if (emails.Any())
                 {
                     HttpClient httpClient = new HttpClient();
-                    Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}{email.UserWebId}?code={SendEmailFunctionKey}");
-                    var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, email);
+                    Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
+                    var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, emails);
                     var lastMessage = await returnMessage.Content.ReadAsStringAsync();
                 }
             }
