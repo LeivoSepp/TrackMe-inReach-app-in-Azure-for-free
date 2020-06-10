@@ -55,7 +55,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
                 //saving d1 to restore it later
-                var saveForTrackd1 = item.d1;
+                //var saveForTrackd1 = item.d1;
                 //set d1 to LastPointTimestamp (if exist) to download the feed from that point from Garmin
                 if (!string.IsNullOrEmpty(item.LastPointTimestamp))
                     item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -90,13 +90,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
                     //process the full track
                     helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
-                    
+
                     //restore d1 as it was removed initially
-                    if (fullTrack.id != TodayTrackId)
-                    {
-                        fullTrack.d1 = DateTime.Parse(saveForTrackd1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ"); 
-                        fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    }
+                    //if (fullTrack.id != TodayTrackId)
+                    //{
+                    fullTrack.d1 = DateTime.Parse(fullTrack.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    //}
                     await output.AddAsync(fullTrack);
                 }
             }
