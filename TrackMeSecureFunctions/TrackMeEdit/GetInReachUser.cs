@@ -14,7 +14,7 @@ using Microsoft.Azure.Documents;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Globalization;
- 
+
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
     public static class GetInReachUser
