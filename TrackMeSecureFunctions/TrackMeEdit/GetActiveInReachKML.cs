@@ -41,8 +41,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var TodayTrackId = config["TodayTrackId"];
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
-            //string TodayTrackId = "TodayTrack";
-            var emails = new List<Emails>();
+            List<Emails> emails = new List<Emails>();
 
             DateTime dateTimeUTC = DateTime.UtcNow.ToUniversalTime();
 
@@ -51,36 +50,34 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
-            //getting all tracks which are currently active 
             foreach (var item in TracksMetadata)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
                 //saving d1 to restore it later
-                var saveForTrackd1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                var saveForTrackd1 = item.d1;
                 //set d1 to LastPointTimestamp (if exist) to download the feed from that point from Garmin
                 if (!string.IsNullOrEmpty(item.LastPointTimestamp))
                     item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 else
                     item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                //reset Today's track tracking information and set date = today to download full Today Track
+                //resetting Today's track, once at night according to user Timezone
                 if (lastd1 < today && item.id == TodayTrackId)
                 {
                     var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
                     var dateTimed1 = DateTime.Parse(dated1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    var dateTimed2 = DateTime.Parse(dated1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     item.d1 = dateTimed1;
-                    item.PlacemarksAll = "";
-                    item.PlacemarksWithMessages = "";
-                    item.LineString = "";
+                    item.d2 = dateTimed2;
                     item.LastLongitude = 0;
                     item.LastLatitude = 0;
                     item.LastTotalDistance = 0;
                     item.LastPointTimestamp = "";
                     item.TrackStartTime = "";
-                    saveForTrackd1 = item.d1;
+                    await output.AddAsync(item);
                 }
-                //getting always only last point from garmin (except if new day with someone's active tracking has started)
+                //getting always only last point from garmin (except if new day with active tracking has started)
                 HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
                 var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
 
@@ -93,12 +90,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
                     //process the full track
                     helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
+                    
                     //restore d1 as it was removed initially
-                    fullTrack.d1 = saveForTrackd1;
-                    if (fullTrack.id == TodayTrackId)
-                        fullTrack.d2 = DateTime.Parse(fullTrack.d1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    else
+                    if (fullTrack.id != TodayTrackId)
+                    {
+                        fullTrack.d1 = DateTime.Parse(saveForTrackd1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ"); 
                         fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    }
                     await output.AddAsync(fullTrack);
                 }
             }
