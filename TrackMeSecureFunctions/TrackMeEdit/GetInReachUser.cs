@@ -13,7 +13,6 @@ using System.Linq;
 using Microsoft.Azure.Documents;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
-using Microsoft.Azure.Documents.SystemFunctions;
 using System.Globalization;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
@@ -123,7 +122,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     HttpClient httpClient = new HttpClient();
                     Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
                     var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, emails);
-                    var lastMessage = await returnMessage.Content.ReadAsStringAsync();
+                    //var lastMessage = await returnMessage.Content.ReadAsStringAsync();
                 }
             }
             //delete Today's track

@@ -107,7 +107,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 HttpClient client = new HttpClient();
                 Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
                 var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emails);
-                var lastMessage = await returnMessage.Content.ReadAsStringAsync();
+                //var lastMessage = await returnMessage.Content.ReadAsStringAsync();
             }
         }
     }
