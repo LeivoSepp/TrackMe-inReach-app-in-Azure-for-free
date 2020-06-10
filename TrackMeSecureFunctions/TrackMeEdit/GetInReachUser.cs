@@ -14,6 +14,7 @@ using Microsoft.Azure.Documents;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using Microsoft.Azure.Documents.SystemFunctions;
+using System.Globalization;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -96,11 +97,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             {
                 id = TodayTrackId,
                 Title = "Today's track",
+                d1 = dateTimed1,
+                d2 = dateTimed2,
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
                 InReachWebPassword = LoggedInUser.InReachWebPassword,
-                d1 = dateTimed1,
-                d2 = dateTimed2,
                 UserTimezone = LoggedInUser.UserTimezone
             };
             //create Today's track
@@ -145,8 +146,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             foreach (KMLInfo item in TracksMetadata)
             {
                 item.groupid = newUserWebId;
+                item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                item.d2 = DateTime.Parse(item.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                item.LastPointTimestamp = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 await addDocuments.AddAsync(item);
-                //await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
+                await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
             }
         }
     }
