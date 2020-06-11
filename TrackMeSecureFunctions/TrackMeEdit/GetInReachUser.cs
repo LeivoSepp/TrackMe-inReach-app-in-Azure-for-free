@@ -113,7 +113,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //get feed grom garmin
                 var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
                 //parse and transform the feed and save to database
-                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, WebSiteUrl);
+                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, LoggedInUser, WebSiteUrl);
                 await addDocuments.AddAsync(TodayTrack);
 
                 //sending out emails

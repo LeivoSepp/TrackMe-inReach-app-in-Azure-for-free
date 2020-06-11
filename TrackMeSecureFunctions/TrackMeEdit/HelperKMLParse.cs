@@ -6,7 +6,6 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using GeoCoordinatePortable;
-using Microsoft.Azure.Documents.SystemFunctions;
 
 //google map icons: http://kml4earth.appspot.com/icons.html
 
@@ -175,7 +174,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails, string webSiteUrl = "")
+        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails, InReachUser user = null, string webSiteUrl = "")
         {
             //open and parse KMLfeed
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
@@ -269,7 +268,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             double totalDistance = fullTrack.LastTotalDistance;
             TimeSpan totalTime = new TimeSpan();
             TimeSpan.TryParse(fullTrack.LastTotalTime, out totalTime);
-                
+
             DateTime lastDate = new DateTime();
             var lineStringMessage = string.Empty;
             DateTime trackStarted = new DateTime();
@@ -365,7 +364,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var userWebId = fullTrack.groupid.First().ToString().ToUpper() + fullTrack.groupid.Substring(1);
                     var inReachMessage = NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;
                     lineStringMessage = $"Track started on {fullTrack.TrackStartTime}.<br>Total distance traveled { distance} in { totalTimeStr}.";
-                    var eMailMessage = $"Hello, <br><br><h3>{senderName} is on {fullTrack.Title}.</h3>" +
+                    var eMailMessage = $"Hello, <br><br><h3>{user.name} is on {fullTrack.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
                         $"Follow me on the map <a href='{webSiteUrl}{fullTrack.groupid}/?id={fullTrack.id}'></a>{webSiteUrl}{fullTrack.groupid}/<br><br>" +
@@ -373,16 +372,25 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         $"<a href='https://www.google.com/maps/search/?api=1&query={lastLatitude},{lastLongitude}'>Open in google maps</a>.<br><br>" +
                         $"Best regards,<br>Whoever is carrying this device.<br><br>" +
                         $"<small>Disclaimer<br>" +
-                        $"You are getting this e-mail because you subscribed to receive {senderName} messages.<br>" +
-                        $"Click here to unsubscribe:<a href='{webSiteUrl}unsubscribe/?userWebId={fullTrack.groupid}'>Remove me from {senderName} notifications</a>.<br>" +
+                        $"You are getting this e-mail because you subscribed to receive {user.name} inReach messages.<br>" +
+                        $"Click here to unsubscribe:<a href='{webSiteUrl}unsubscribe/?userWebId={fullTrack.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
-                    var eMailSubject = $"{senderName} at {lastDate:HH:mm}: {inReachMessage}";
+                    var eMailSubject = $"{user.name} at {lastDate:HH:mm}: {inReachMessage}";
                     //check if the eventType is one from the list of predefined messages
                     if (InReachEvents.Any(eventType.Contains))
                     {
                         documentPlacemark.Add(NewPlacemark);
                         documentPlacemarkMessages.Add(NewPlacemark);
-                        emails.Add(new Emails { EmailBody = eMailMessage, EmailSubject = eMailSubject, UserWebId = fullTrack.groupid, DateTime = dateTimeString });
+                        emails.Add(new Emails
+                        {
+                            EmailBody = eMailMessage,
+                            EmailSubject = eMailSubject,
+                            UserWebId = fullTrack.groupid,
+                            DateTime = dateTimeString,
+                            EmailFrom = user.email,
+                            Name = user.name,
+                            EmailTo = user.subscibers
+                        });
                     }
                     else
                     {
@@ -438,18 +446,14 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string _self { get; set; }
     }
 
-
-    public class Users
-    {
-        public string id { get; set; }
-        public string InReachWebAddress { get; set; }
-        public InReachUser[] InReachUsers { get; set; }
-    }
     public class Emails
     {
         public string EmailSubject { get; set; }
         public string EmailBody { get; set; }
         public string UserWebId { get; set; }
         public string DateTime { get; set; }
+        public string Name { get; set; }
+        public string EmailFrom { get; set; }
+        public string[] EmailTo { get; set; }
     }
 }

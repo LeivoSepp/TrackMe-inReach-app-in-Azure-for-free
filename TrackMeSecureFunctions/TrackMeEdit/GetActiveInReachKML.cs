@@ -28,6 +28,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
            )] DocumentClient documentClient,
+             [CosmosDB(
+                databaseName: "FreeCosmosDB",
+                collectionName: "TrackMe",
+                ConnectionStringSetting = "CosmosDBForFree",
+                SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
+            )] IEnumerable<InReachUser> users,
             ExecutionContext context)
         {
             var config = new ConfigurationBuilder()
@@ -45,14 +51,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
             DateTime dateTimeUTC = DateTime.UtcNow.ToUniversalTime();
 
-            //getting active tracks from cosmos
+            //getting active tracks from CosmosDB
             var query = new SqlQuerySpec("SELECT c.id, c.d1, c.Title, c.groupid, c.UserTimezone, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @dateTimeUTC and c.d2 > @dateTimeUTC) or c.id = @TodayTrack",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
-            //remove all duplicates by LastPointTimestamp field. To have only one query to Garmin.
+            //remove all duplicates by LastPointTimestamp and groupid field to make only one query to Garmin per user (if user has multiple tracks in same time)
             IEnumerable<KMLInfo> TracksListDeDuplicate = TracksMetadata.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
-            //Where(x => x.id != TodayTrackId)
+
+            //getting feed from garmin, one feed for each user if LastpointTimestamp is same
             foreach (var item in TracksListDeDuplicate)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
@@ -91,8 +98,17 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
                     KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
 
+                    var user = new InReachUser();
+                    foreach (var usr in users)
+                    {
+                        if (usr.userWebId == fullTrack.groupid)
+                        {
+                            user = usr;
+                            return;
+                        }
+                    }
                     //process the full track
-                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, user, WebSiteUrl);
 
                     fullTrack.d1 = DateTime.Parse(fullTrack.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -101,9 +117,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 }
             }
 
-            //sending out emails
+            //remove all duplicates by DateTime field and sending the list to SendEmailFunction
             if (emails.Any())
             {
+                List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
                 HttpClient client = new HttpClient();
                 Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
                 var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emails);
