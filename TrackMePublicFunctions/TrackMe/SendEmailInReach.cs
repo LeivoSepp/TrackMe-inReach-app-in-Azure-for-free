@@ -36,9 +36,10 @@ namespace TrackMePublicFunctions.TrackMe
         {
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             List<Emails> emails = JsonConvert.DeserializeObject<List<Emails>>(requestBody);
-            
-            //remove all duplicates by DateTime field.
+
+            //remove all duplicates by DateTime field. 
             List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
+
             foreach (var email in emailList)
             {
                 var message = new SendGridMessage();

@@ -50,6 +50,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
+            //remove all duplicates by LastPointTimestamp field. Need to work with.
+            //IEnumerable<KMLInfo> TracksList = TracksMetadata.GroupBy(x => x.LastPointTimestamp).Select(x => x.Where(x => x.id != TodayTrackId).First()).ToList();
+
             foreach (var item in TracksMetadata)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
