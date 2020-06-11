@@ -427,7 +427,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public double LastTotalDistance { get; set; }
         public string LastTotalTime { get; set; }
         public string TrackStartTime { get; set; }
-        public string LasMessage { get; set; }
+        public string LastPoint { get; set; }
         public string PlannedTrack { get; set; }
         public string PlacemarksAll { get; set; }
         public string PlacemarksWithMessages { get; set; }

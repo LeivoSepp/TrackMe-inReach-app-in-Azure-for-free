@@ -50,10 +50,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
-            //remove all duplicates by LastPointTimestamp field. Need to work with.
-            //IEnumerable<KMLInfo> TracksList = TracksMetadata.GroupBy(x => x.LastPointTimestamp).Select(x => x.Where(x => x.id != TodayTrackId).First()).ToList();
+            //remove all duplicates by LastPointTimestamp field. To have only one query to Garmin.
+            IEnumerable<KMLInfo> TracksListDeDuplicate = TracksMetadata.GroupBy(x => x.LastPointTimestamp).Select(x => x.Where(x => x.id != TodayTrackId).First()).ToList();
 
-            foreach (var item in TracksMetadata)
+            foreach (var item in TracksListDeDuplicate)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
@@ -78,7 +78,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //getting always only last point from garmin (except if new day with active tracking has started)
                 HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
                 var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
+                item.LastPoint = kmlFeedresult;
+            }
 
+            foreach (var item in TracksMetadata)
+            {
+                var kmlFeedresult = TracksListDeDuplicate.First(x => x.groupid == item.groupid).LastPoint;
                 //if there are new points, then load whole track from database and add the point
                 if (helperKMLParse.IsThereNewPoints(kmlFeedresult, item))
                 {
