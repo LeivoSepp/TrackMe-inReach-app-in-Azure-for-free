@@ -51,8 +51,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
             //remove all duplicates by LastPointTimestamp field. To have only one query to Garmin.
-            IEnumerable<KMLInfo> TracksListDeDuplicate = TracksMetadata.GroupBy(x => x.LastPointTimestamp).Select(x => x.Where(x => x.id != TodayTrackId).First()).ToList();
-
+            IEnumerable<KMLInfo> TracksListDeDuplicate = TracksMetadata.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
+            //Where(x => x.id != TodayTrackId)
             foreach (var item in TracksListDeDuplicate)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
