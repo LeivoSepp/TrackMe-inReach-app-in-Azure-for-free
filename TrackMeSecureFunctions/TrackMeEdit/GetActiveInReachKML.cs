@@ -46,7 +46,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             DateTime dateTimeUTC = DateTime.UtcNow.ToUniversalTime();
 
             //getting active tracks from cosmos
-            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.groupid, c.UserTimezone, c.LastPointTimestamp, c.LastLatitude, c.LastLongitude, c.LastDistance, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @dateTimeUTC and c.d2 > @dateTimeUTC) or c.id = @TodayTrack",
+            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.Title, c.groupid, c.UserTimezone, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @dateTimeUTC and c.d2 > @dateTimeUTC) or c.id = @TodayTrack",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
             IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
@@ -54,8 +54,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
-                //saving d1 to restore it later
-                //var saveForTrackd1 = item.d1;
+
                 //set d1 to LastPointTimestamp (if exist) to download the feed from that point from Garmin
                 if (!string.IsNullOrEmpty(item.LastPointTimestamp))
                     item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
@@ -70,11 +69,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var dateTimed2 = DateTime.Parse(dated1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     item.d1 = dateTimed1;
                     item.d2 = dateTimed2;
-                    item.LastLongitude = 0;
-                    item.LastLatitude = 0;
-                    item.LastTotalDistance = 0;
                     item.LastPointTimestamp = "";
-                    item.TrackStartTime = "";
                     await output.AddAsync(item);
                 }
                 //getting always only last point from garmin (except if new day with active tracking has started)
@@ -91,12 +86,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //process the full track
                     helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, WebSiteUrl);
 
-                    //restore d1 as it was removed initially
-                    //if (fullTrack.id != TodayTrackId)
-                    //{
                     fullTrack.d1 = DateTime.Parse(fullTrack.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    //}
+
                     await output.AddAsync(fullTrack);
                 }
             }
