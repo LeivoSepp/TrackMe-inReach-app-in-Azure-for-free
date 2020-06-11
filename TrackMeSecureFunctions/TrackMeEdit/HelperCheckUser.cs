@@ -27,6 +27,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         TrackMeUser = user;
                         TrackMeUser.email = loggedInUser.email; //in case user email has changed
                         TrackMeUser.name = loggedInUser.name; //in case user name has changed
+                        TrackMeUser.status = Status.ExistingUser;
                         return TrackMeUser;
                     }
                 }
