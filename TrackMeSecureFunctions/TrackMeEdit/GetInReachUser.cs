@@ -76,7 +76,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         await ChangePartitionAsync(LoggedInUser.userWebId, userDataFromWeb.userWebId, addDocuments, client, collectionUri); //change partitionIDs
                     LoggedInUser.InReachWebAddress = userDataFromWeb.InReachWebAddress;
                     LoggedInUser.InReachWebPassword = userDataFromWeb.InReachWebPassword;
-                    LoggedInUser.userWebId = userDataFromWeb.userWebId;
+                    LoggedInUser.userWebId = userDataFromWeb.userWebId.ToLower();
                     LoggedInUser.Active = userDataFromWeb.Active;
                     LoggedInUser.UserTimezone = userDataFromWeb.UserTimezone;
                     await ManageTodayTrack(LoggedInUser, addDocuments, client, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl);

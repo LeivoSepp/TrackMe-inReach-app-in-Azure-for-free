@@ -74,7 +74,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //resetting Today's track, once at night according to user Timezone
                 if (lastd1 < today && item.id == TodayTrackId)
                 {
-                    var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
+                    var dated1 = DateTime.UtcNow.ToUniversalTime().AddHours(item.UserTimezone).ToString("yyyy-MM-dd");
                     var dateTimed1 = DateTime.Parse(dated1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     var dateTimed2 = DateTime.Parse(dated1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
                     item.d1 = dateTimed1;
@@ -104,7 +104,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         if (usr.userWebId == fullTrack.groupid)
                         {
                             user = usr;
-                            return;
+                            break;
                         }
                     }
                     //process the full track

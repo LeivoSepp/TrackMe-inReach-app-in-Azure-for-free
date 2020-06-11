@@ -358,22 +358,21 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                             fullTrack.TrackStartTime = trackStarted.ToString("HH:mm dd.MM.yyyy");
                     }
 
-                    //get the sender name as a Garmin Map Display Name
-                    var senderName = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Map Display Name']/kml:value", ns).Value;
+                    //get the sender name as a Garmin Map Display Name. Not used.
+                    //var senderName = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Map Display Name']/kml:value", ns).Value;
 
-                    var userWebId = fullTrack.groupid.First().ToString().ToUpper() + fullTrack.groupid.Substring(1);
                     var inReachMessage = NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;
                     lineStringMessage = $"Track started on {fullTrack.TrackStartTime}.<br>Total distance traveled { distance} in { totalTimeStr}.";
                     var eMailMessage = $"Hello, <br><br><h3>{user.name} is on {fullTrack.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
-                        $"Follow me on the map <a href='{webSiteUrl}{fullTrack.groupid}/?id={fullTrack.id}'></a>{webSiteUrl}{fullTrack.groupid}/<br><br>" +
+                        $"Follow me on the map <a href='{webSiteUrl}/{fullTrack.groupid}?id={fullTrack.id}'></a>{webSiteUrl}/{fullTrack.groupid}<br><br>" +
                         $"This message was sent in {lastDate:HH:mm dd.MM.yyyy}, at location LatLon: {lastLatitude}, {lastLongitude}. " +
                         $"<a href='https://www.google.com/maps/search/?api=1&query={lastLatitude},{lastLongitude}'>Open in google maps</a>.<br><br>" +
                         $"Best regards,<br>Whoever is carrying this device.<br><br>" +
                         $"<small>Disclaimer<br>" +
                         $"You are getting this e-mail because you subscribed to receive {user.name} inReach messages.<br>" +
-                        $"Click here to unsubscribe:<a href='{webSiteUrl}unsubscribe/?userWebId={fullTrack.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
+                        $"Click here to unsubscribe:<a href='{webSiteUrl}/unsubscribe?userWebId={fullTrack.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
                     var eMailSubject = $"{user.name} at {lastDate:HH:mm}: {inReachMessage}";
                     //check if the eventType is one from the list of predefined messages
