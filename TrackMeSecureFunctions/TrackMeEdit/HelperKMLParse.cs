@@ -114,12 +114,12 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             return Document;
         }
         //get server-based date-time and calculate it to specific timezone
-        public DateTime GetLocalTime(string timezone)
-        {
-            //timezone: "FLE Standard Time"
-            var TimezoneCorrected = TimeZoneInfo.FindSystemTimeZoneById(timezone);
-            return TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimezoneCorrected);
-        }
+        //public DateTime GetLocalTime(string timezone)
+        //{
+        //    //timezone: "FLE Standard Time"
+        //    var TimezoneCorrected = TimeZoneInfo.FindSystemTimeZoneById(timezone);
+        //    return TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimezoneCorrected);
+        //}
         string ReturnValue(XElement element)
         {
             var checkFolder = element;
@@ -329,7 +329,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     var dateTimeToPlacemark = $"{dT:HH:mm dd.MM.yyyy}";
                     NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Time']/kml:value", ns).Value = dateTimeToPlacemark;
 
-                    //select lastpoint timestamp
+                    //select lastpoint timestamp. The nevest placemark is always the last placemark.
                     LastPointTimestamp = placemark.XPathSelectElement("./kml:TimeStamp/kml:when", ns).Value;
 
                     //calculate total time

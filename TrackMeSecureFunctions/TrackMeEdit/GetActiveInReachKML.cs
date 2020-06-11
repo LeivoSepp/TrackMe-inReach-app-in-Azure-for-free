@@ -55,9 +55,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
 
-                //set d1 to LastPointTimestamp (if exist) to download the feed from that point from Garmin
+                //set d1 to LastPointTimestamp + 1 second (if LastTimestamp exist) to download the feed from that point forward from Garmin
                 if (!string.IsNullOrEmpty(item.LastPointTimestamp))
-                    item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).AddSeconds(1).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 else
                     item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
