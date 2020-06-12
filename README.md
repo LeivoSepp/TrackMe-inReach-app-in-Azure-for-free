@@ -26,8 +26,8 @@ Host this website with zero cost using serverless architecture in Azure.
 
 |Icon|Keyword found in message|
 | ---- | ---- |
-|![Hiker](ReadmePictures/hiker.png)|No keyword! Tracking started icon and this cannot be changed.|
-|![Mailbox](ReadmePictures/mailbox.png)|No keyword! Default message icon if inReach message received.|
+|![Hiker](ReadmePictures/hiker.png)|Not managed by keyword! Tracking started icon.|
+|![Mailbox](ReadmePictures/mailbox.png)|Not managed by keyword! Default icon for any messages.|
 |![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
 |![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
 |![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
