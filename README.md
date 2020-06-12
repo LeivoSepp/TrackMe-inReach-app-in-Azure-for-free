@@ -1,8 +1,12 @@
 # TrackMe inReach app
 #### https://track.ekstreem.ee/
-### What is this app?  
+### What is this app?
+1. For the peace of mind of my loved ones.
+2. To inspire others to dream more, learn more, do more and become more.
+3. Intuitive user experience.
+
 Share your Garmin inReach position and messages during your outdoor adventures in near real time.  
-This website has almost zero cost using serverless technologies in Azure.
+Host this website with zero cost using serverless architecture in Azure.
 ### Public functionality
 ![Track](ReadmePictures/track.png)
 * People can follow you in the map.
@@ -37,7 +41,7 @@ This website has almost zero cost using serverless technologies in Azure.
 * Define your own tracks for Live tracking with a customized start-finish date. You can have many parallel tracks for example:
   * One track is a whole expedition with a duration of two months. "Everest 2020 expedition".
   * Other tracks could be like "Approaching into Everest basecamp", "Acclimatization", "Summit days" etc.
-* This website can publish your tracks even if your Garmin's inReach site is protected by password.
+* You can publish your tracks even if your Garmin's inReach site is protected by password.
 * You can publish historical tracks with a meaningful name, start and finish date.
 * You can have your own inReach device which is used as default device for your tracks.
 * You can rent or loan inReach from a friend and each your track can have a different device connected.
