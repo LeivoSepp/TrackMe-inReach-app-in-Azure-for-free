@@ -44,8 +44,7 @@ This website has almost zero cost using serverless technologies in Azure.
 * User authentication is based on Microsoft Account (Live ID).
 * Multi-user application. 
 ### TrackMe Architecture
-
-![Track Me Web Site](TrackMeWebSite.png)
+![Track Me Web Site](TrackMeArchitecture.png)
 
 
 
