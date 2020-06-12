@@ -1,4 +1,5 @@
 # TrackMe inReach app
+https://track.ekstreem.ee/
 **What is this app?**  
 This app is reading inReach KML feed from Garmin site and displays live and/or historical tracks on google maps.
 ### Functionality
@@ -24,7 +25,8 @@ This app is reading inReach KML feed from Garmin site and displays live and/or h
 * People can see the date, kilometers traveled and duration into each point from the start.
 * People can see detailed points information in the map if the track duration is two days or less.
 ### Technical Functionality
-
+* If you have multiple parallel tracks then subscribers e-mail will be sent out only once.
+* 
 ### TrackMe Architecture
 
 ![Track Me Web Site](TrackMeWebSite.png)
