@@ -11,7 +11,7 @@ This app is reading inReach KML feed from Garmin site and displays live and/or h
 * You can have your own inReach device which is used by default for your tracks.
 * You can have a rented inReach and each track can have their own inReach device.
 ### Public functionality
-* People can see you in the map.
+* People can follow you in the map.
 * People can see all your predefined live or historical tracks. 
 * People can locate themself on the map. This is very useful in cases like this: 
   * if you have a support person and he/she has to meet you in some place,
