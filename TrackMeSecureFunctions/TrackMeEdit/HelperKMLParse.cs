@@ -67,15 +67,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             new StyleKeyword("messageReceived", "post_office.png",
                 new List<string>{ InReachEvents[1], InReachEvents[2] }),
             new StyleKeyword("campStyle", "campground.png",
-                new List<string>{"camp", "laager", "telk" }),
+                new List<string>{"camp", "campsite", "tent", "bivouac", "laager" }),
             new StyleKeyword("finishStyle", "parking_lot.png",
-                new List<string>{"finish", "lõpeta" }),
+                new List<string>{"finish", "complete", "end", "close", "parking", "stop" }),
             new StyleKeyword("summitStyle", "mountains.png",
-                new List<string>{"summit", "tipp" }),
+                new List<string>{"summit", "top", "peak", "mountain"}),
             new StyleKeyword("picnicStyle", "picnic.png",
-                new List<string>{"lõuna", "piknik", "picnic" }),
+                new List<string>{"picnic", "meal", "cooking", "bbq", "barbeque", "cookout" }),
             new StyleKeyword("cameraStyle", "camera.png",
-                new List<string>{"ilus", "huvitav" })
+                new List<string>{"beautiful", "beauty spot", "exciting", "nice", "great", "lovely", "pretty", "cool"})
         };
 
         //add new style into KMLfeed

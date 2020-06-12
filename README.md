@@ -43,6 +43,18 @@ This website has almost zero cost using serverless technologies in Azure.
   * Detailed points are arrows which points to the real moving direction.
 * User authentication is based on Microsoft Account (Live ID).
 * Multi-user application. 
+* Keywords used to change the messages icons.
+
+|Icon|Keywords|
+| ---- | ---- |
+|![Hiker](ReadmePictures/hiker.png)|Tracking turned on from device. This is inReach message and cannot be changed.|
+|![Mailbox](ReadmePictures/mailbox.png)|Default icon if inReach message received but no keywords found.|
+|![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
+|![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
+|![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
+|![Picnic](ReadmePictures/picnic.png)|picnic, meal, cooking, bbq, barbeque, cookout|
+|![Camera](ReadmePictures/camera.png)|beautiful, beauty spot, exciting, nice, great, lovely, pretty, cool|
+
 ### TrackMe Architecture
 ![Track Me Web Site](ReadmePictures/TrackMeArchitecture.png)
 
