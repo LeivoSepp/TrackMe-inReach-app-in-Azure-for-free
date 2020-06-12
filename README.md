@@ -23,24 +23,26 @@ This website has almost zero cost using serverless technologies in Azure.
 * People can click everywhere on the map to start navigation with Waze or Google maps.  
 ![Driveby Waze Googl](drivebyWazeGoogl.png)
 ### User functionality
-* Turn on/off inReach Live tracking in *Today's track*. This track will be resetted every night.
+* Turn on/off inReach Live tracking in *Today's track*. This track will be resetted every night.  
+![Todaytrack](todaytrack.png)
 * Define your own tracks for Live tracking with a customized start-finish date. You can have many parallel tracks for example:
   * One track is a whole expedition with a duration of two months. "Everest 2020 expedition".
   * Other tracks could be like "Approaching into Everest basecamp", "Acclimatization", "Summit days" etc.
 * This website can publish your tracks even if your Garmin's inReach site is protected by password.
 * You can publish historical tracks with a meaningful name, start and finish date.
 * You can have your own inReach device which is used as default device for your tracks.
-* Each track can have a different inReach device. This scenario is good for renting devices.
+* You can rent or loan inReach from a friend and each your track can have a different device connected.
 * You can upload a previously planned track. This is useful in cases like this:
   * People can see visually how far you are on your track.
   * If you have a support person then he/she knows exactly where he/she can meet you.
 ### Technical Functionality
 * If you have multiple parallel tracks then e-mail subscribers get notified only once.
 * This application check new points from Garmin in every 5 minutes. Only last point is downloaded from Garmin.
-* Up to two day tracks can have detailed points in a map showing exact time, speed, distance, duration, heading.
+* Up to two day tracks can have detailed points in a map with exact time, speed, distance, duration, heading.
   * This is not enabled for longer tracks as it has great impact on file size loaded into map.
-* Authentication for track management pages is based on Microsoft Account (Live ID).
-* Multi-user application
+  * Detailed points are arrows which points to the real moving direction.
+* User authentication is based on Microsoft Account (Live ID).
+* Multi-user application. 
 ### TrackMe Architecture
 
 ![Track Me Web Site](TrackMeWebSite.png)
