@@ -3,7 +3,26 @@
 ### What is this app?  
 Share your Garmin inReach position and messages during your outdoor adventures in near real time.
 This website has almost zero cost using serverless technologies in Azure.
-### Functionality
+### Public functionality
+![Track](track.png)
+* People can follow you in the map.
+* People can see your inReach messages on the map.
+* People can see your track length, duration and starting time.
+* People can see each point location, time, distance traveled, speed, duration, heading.
+* People can see your historical tracks if defined. 
+![Tracks](tracks.png)
+* People can locate themself on the map. This is useful in cases like this: 
+  * If you have a support person then it's very easy to align location in a map,
+  * If someone has to find you then it is very easy to undestand how close you are.
+* People can subscribe to your Live tracks to get notified by e-mail:
+  * If you turn on inReach (Tracking has started)
+  * If you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.  
+![Subscribe](subscribe.png)
+* Messages icons on a map are based on keywords found in message.  
+![Messageicons](messageicons.png)
+* People can click everywhere on the map to start navigation with Waze or Google maps.  
+![Driveby Waze Googl](drivebyWazeGoogl.png)
+### User functionality
 * Turn on/off inReach Live tracking in *Today's track*. This track will be resetted every night.
 * Define your own tracks for Live tracking with a customized start-finish date. You can have many parallel tracks for example:
   * One track is a whole expedition with a duration of two months. "Everest 2020 expedition".
@@ -15,19 +34,6 @@ This website has almost zero cost using serverless technologies in Azure.
 * You can upload a previously planned track. This is useful in cases like this:
   * People can see visually how far you are on your track.
   * If you have a support person then he/she knows exactly where he/she can meet you.
-### Public functionality
-* People can follow you in the map.
-* People can see your inReach messages on the map.
-* People can see your track length, duration and starting time.
-* People can see each point location, time, distance traveled, speed, duration, heading.
-* People can see your historical tracks if defined. 
-* People can locate themself on the map. This is useful in cases like this: 
-  * If you have a support person then it's very easy to align location in a map,
-  * If someone has to find you then it is very easy to undestand how close you are.
-* People can subscribe to your Live tracks to get notified by e-mail:
-  * If you turn on inReach (Tracking has started)
-  * If you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.
-* People can click everywhere on the map to start navigation with Waze or Google maps.
 ### Technical Functionality
 * If you have multiple parallel tracks then e-mail subscribers get notified only once.
 * This application check new points from Garmin in every 5 minutes. Only last point is downloaded from Garmin.
