@@ -24,10 +24,10 @@ Host this website with zero cost using serverless architecture in Azure.
 ![Subscribe](ReadmePictures/subscribe.png)
 * Messages icons on a map are based on keywords found in message.  
 
-|Icon|Keywords|
+|Icon|Keyword found in message|
 | ---- | ---- |
-|![Hiker](ReadmePictures/hiker.png)|Tracking turned on from device. This is inReach message and cannot be changed.|
-|![Mailbox](ReadmePictures/mailbox.png)|Default icon if any inReach message received but no keywords found.|
+|![Hiker](ReadmePictures/hiker.png)|No keyword! Tracking started icon and this cannot be changed.|
+|![Mailbox](ReadmePictures/mailbox.png)|No keyword! Default message icon if inReach message received.|
 |![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
 |![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
 |![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
