@@ -19,7 +19,16 @@ This website has almost zero cost using serverless technologies in Azure.
   * If you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.  
 ![Subscribe](ReadmePictures/subscribe.png)
 * Messages icons on a map are based on keywords found in message.  
-![Messageicons](ReadmePictures/messageicons.png)
+
+|Icon|Keywords|
+| ---- | ---- |
+|![Hiker](ReadmePictures/hiker.png)|Tracking turned on from device. This is inReach message and cannot be changed.|
+|![Mailbox](ReadmePictures/mailbox.png)|Default icon if any inReach message received but no keywords found.|
+|![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
+|![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
+|![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
+|![Picnic](ReadmePictures/picnic.png)|picnic, meal, cooking, bbq, barbeque, cookout|
+|![Camera](ReadmePictures/camera.png)|beautiful, beauty spot, exciting, nice, great, lovely, pretty, cool|
 * People can click everywhere on the map to start navigation with Waze or Google maps.  
 ![Driveby Waze Googl](ReadmePictures/drivebyWazeGoogl.png)
 ### User functionality
@@ -43,17 +52,6 @@ This website has almost zero cost using serverless technologies in Azure.
   * Detailed points are arrows which points to the real moving direction.
 * User authentication is based on Microsoft Account (Live ID).
 * Multi-user application. 
-* Keywords for message icons.
-
-|Icon|Keywords|
-| ---- | ---- |
-|![Hiker](ReadmePictures/hiker.png)|Tracking turned on from device. This is inReach message and cannot be changed.|
-|![Mailbox](ReadmePictures/mailbox.png)|Default icon if any inReach message received but no keywords found.|
-|![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
-|![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
-|![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
-|![Picnic](ReadmePictures/picnic.png)|picnic, meal, cooking, bbq, barbeque, cookout|
-|![Camera](ReadmePictures/camera.png)|beautiful, beauty spot, exciting, nice, great, lovely, pretty, cool|
 
 ### TrackMe Architecture
 ![Track Me Web Site](ReadmePictures/TrackMeArchitecture.png)
