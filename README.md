@@ -1,7 +1,7 @@
 # TrackMe inReach app
 #### https://track.ekstreem.ee/
 ### What is this app?  
-Share your Garmin inReach position and messages during your outdoor adventures in near real time.
+Share your Garmin inReach position and messages during your outdoor adventures in near real time.  
 This website has almost zero cost using serverless technologies in Azure.
 ### Public functionality
 ![Track](track.png)
@@ -9,7 +9,7 @@ This website has almost zero cost using serverless technologies in Azure.
 * People can see your inReach messages on the map.
 * People can see your track length, duration and starting time.
 * People can see each point location, time, distance traveled, speed, duration, heading.
-* People can see your historical tracks if defined. 
+* People can see your historical tracks if defined.  
 ![Tracks](tracks.png)
 * People can locate themself on the map. This is useful in cases like this: 
   * If you have a support person then it's very easy to align location in a map,
