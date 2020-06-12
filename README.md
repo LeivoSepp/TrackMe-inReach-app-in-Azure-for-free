@@ -1,7 +1,8 @@
 # TrackMe inReach app
 #### https://track.ekstreem.ee/
 ### What is this app?  
-This app is reading inReach KML feed from Garmin site and displays live and/or historical tracks on the map.
+This app is reading inReach KML feed from Garmin and displays user live location and-or historical tracks on the map.
+This website has almost zero cost using serverless technologies in Azure.
 ### Functionality
 * Turn on/off inReach Live tracking into *Today's track*. This track will be resetted every night.
 * Set inReach Live tracking into predefined track with a specific name, start and end date. There could be many parallel tracks running in same time. For example:
