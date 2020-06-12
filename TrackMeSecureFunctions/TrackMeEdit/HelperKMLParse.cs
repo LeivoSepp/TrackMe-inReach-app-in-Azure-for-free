@@ -375,11 +375,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         $"Click here to unsubscribe:<a href='{webSiteUrl}/unsubscribe?userWebId={fullTrack.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
                     var eMailSubject = $"{user.name} at {lastDate:HH:mm}: {inReachMessage}";
-                    //check if the eventType is one from the list of predefined messages
+                    //if inReach has sent out a message then add a Placemark
                     if (InReachEvents.Any(eventType.Contains))
                     {
-                        documentPlacemark.Add(NewPlacemark);
-                        documentPlacemarkMessages.Add(NewPlacemark);
+                        //documentPlacemark.Add(NewPlacemark);
+                        documentPlacemarkMessages.Add(new XElement(NewPlacemark));
                         emails.Add(new Emails
                         {
                             EmailBody = eMailMessage,
@@ -391,10 +391,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                             EmailTo = user.subscibers
                         });
                     }
-                    else
-                    {
-                        documentPlacemark.Add(NewPlacemark);
-                    }
+                    //add full placemarks only for short less than 1 day tracks 
+                    if (!fullTrack.IsLongTrack)
+                        documentPlacemark.Add(new XElement(NewPlacemark));
+                    //else
+                    //{
+
+                    //}
                 }
                 else
                 {
@@ -412,10 +415,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             fullTrack.LastLongitude = lastLongitude;
             fullTrack.LastTotalTime = totalTime.ToString();
             fullTrack.LastPointTimestamp = LastPointTimestamp;
-
-            fullTrack.PlacemarksAll = xmlString + xmlPlacemarks.ToString();
             fullTrack.PlacemarksWithMessages = xmlString + xmlPlacemarksWithMessages.ToString();
             fullTrack.LineString = xmlString + xmlLineString.ToString();
+            //add full placemarks only for short less than 1 day tracks 
+            if (!fullTrack.IsLongTrack)
+                fullTrack.PlacemarksAll = xmlString + xmlPlacemarks.ToString();
 
             return true;
         }
@@ -438,6 +442,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string LastTotalTime { get; set; }
         public string TrackStartTime { get; set; }
         public string LastPoint { get; set; }
+        public bool IsLongTrack { get; set; }
         public string PlannedTrack { get; set; }
         public string PlacemarksAll { get; set; }
         public string PlacemarksWithMessages { get; set; }

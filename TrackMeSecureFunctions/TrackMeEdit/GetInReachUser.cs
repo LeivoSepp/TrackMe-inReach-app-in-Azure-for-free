@@ -101,7 +101,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 groupid = LoggedInUser.userWebId,
                 InReachWebAddress = LoggedInUser.InReachWebAddress,
                 InReachWebPassword = LoggedInUser.InReachWebPassword,
-                UserTimezone = LoggedInUser.UserTimezone
+                UserTimezone = LoggedInUser.UserTimezone,
+                IsLongTrack = false
             };
             //create Today's track
             if (LoggedInUser.Active)

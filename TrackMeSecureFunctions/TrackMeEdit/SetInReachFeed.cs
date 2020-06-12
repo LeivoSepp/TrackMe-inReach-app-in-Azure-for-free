@@ -80,7 +80,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 if (requestBody != "")
                 {
                     var fullTrack = JsonConvert.DeserializeObject<KMLInfo>(requestBody);
-                    fullTrack.groupid = LoggedInUser.userWebId;
 
                     //1. replace ö->o ä->a etc
                     //2. first: UrlEncode is removing all weird charactes and spaces
@@ -94,15 +93,24 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         fullTrack.id = id;
                     }
                     fullTrack.LastPointTimestamp = "";
+                    fullTrack.groupid = LoggedInUser.userWebId;
+                    fullTrack.IsLongTrack = false;
 
-                    fullTrack.d1 = DateTime.Parse(fullTrack.d1).AddHours(-fullTrack.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    fullTrack.d2 = DateTime.Parse(fullTrack.d2).AddDays(1).AddHours(-fullTrack.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    var dateD1 = DateTime.Parse(fullTrack.d1).AddHours(-fullTrack.UserTimezone);
+                    var dateD2 = DateTime.Parse(fullTrack.d2).AddDays(1).AddHours(-fullTrack.UserTimezone);
+                    TimeSpan timeSpan = dateD2 - dateD1;
+                    //this setting affects of parsing all points (slow) or note. Depending on the duration of the track
+                    if (timeSpan.TotalDays > 2)
+                        fullTrack.IsLongTrack = true;
+
+                    fullTrack.d1 = dateD1.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    fullTrack.d2 = dateD2.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                     HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
                     //get feed grom garmin
                     var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(fullTrack);
                     //parse and transform the feed and save to database
-                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, new List<Emails>());
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, new List<Emails>(), LoggedInUser);
                     await output.AddAsync(fullTrack);
                 }
             }
