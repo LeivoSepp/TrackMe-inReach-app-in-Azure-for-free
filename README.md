@@ -19,9 +19,9 @@ Host this website with zero cost using serverless architecture in Azure.
   * If you have a support person then it's very easy to align location in a map,
   * If someone has to find you then it is very easy to undestand how close you are.
 * People can subscribe to your Live tracks to get notified by e-mail:
+![Subscribe](ReadmePictures/subscribe.png)
   * If you turn on inReach (Tracking has started)
   * If you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.  
-![Subscribe](ReadmePictures/subscribe.png)
 * Messages icons on a map are based on keywords found in message.  
 
 |Icon|Keyword found in message|
