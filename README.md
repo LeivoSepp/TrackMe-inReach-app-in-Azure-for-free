@@ -44,7 +44,7 @@ Host this website with zero cost using serverless architecture in Azure.
 * You can publish your tracks even if your Garmin's inReach site is protected by password.
 * You can publish historical tracks with a meaningful name, start and finish date.
 * You can have your own inReach device which is used by default for your tracks.
-* You can rent or loan inReach from a friend to define different tracks with different devices.
+* You can rent inReach from friend to define different tracks with different devices.
 * You can upload a previously planned track. This is useful in cases like this:
   * People can see visually how far you are on your track.
   * If you have a support person then he/she knows exactly where he/she can meet you.
