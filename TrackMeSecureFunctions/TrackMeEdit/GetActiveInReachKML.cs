@@ -58,40 +58,48 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             IEnumerable<KMLInfo> kMLInfos = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
             //remove all duplicates by LastPointTimestamp and groupid field to make only one query to Garmin per user (if user has multiple Live tracks in same time)
-            IEnumerable<KMLInfo> kMLInfosDeDuplicate = kMLInfos.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
+            IEnumerable<KMLInfo> kMLInfoDeDups = kMLInfos.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
 
             //getting feed from garmin, one feed for each user if LastpointTimestamp is same
-            foreach (var item in kMLInfosDeDuplicate)
+            foreach (var kMLInfoDeDup in kMLInfoDeDups)
             {
-                DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
+                DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(kMLInfoDeDup.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
 
                 //set d1 to LastPointTimestamp + 1 second (if LastTimestamp exist) to download the feed from that point forward from Garmin
-                if (!string.IsNullOrEmpty(item.LastPointTimestamp))
-                    item.d1 = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).AddSeconds(1).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                if (!string.IsNullOrEmpty(kMLInfoDeDup.LastPointTimestamp))
+                    kMLInfoDeDup.d1 = DateTime.Parse(kMLInfoDeDup.LastPointTimestamp, CultureInfo.InvariantCulture).AddSeconds(1).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 else
-                    item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfoDeDup.d1 = DateTime.Parse(kMLInfoDeDup.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                 //resetting Today's track, once at night according to user Timezone
-                if (lastd1 < today && item.id == TodayTrackId)
+                if (lastd1 < today && kMLInfoDeDup.id == TodayTrackId)
                 {
-                    var dated1 = DateTime.UtcNow.ToUniversalTime().AddHours(item.UserTimezone).ToString("yyyy-MM-dd");
-                    var dateTimed1 = DateTime.Parse(dated1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    var dateTimed2 = DateTime.Parse(dated1).AddDays(1).AddHours(-item.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    item.d1 = dateTimed1;
-                    item.d2 = dateTimed2;
-                    item.LastPointTimestamp = "";
-                    await asyncCollectorKMLInfo.AddAsync(item);
+                    var dated1 = DateTime.UtcNow.ToUniversalTime().AddHours(kMLInfoDeDup.UserTimezone).ToString("yyyy-MM-dd");
+                    var dateTimed1 = DateTime.Parse(dated1).AddHours(-kMLInfoDeDup.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    var dateTimed2 = DateTime.Parse(dated1).AddDays(1).AddHours(-kMLInfoDeDup.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfoDeDup.d1 = dateTimed1;
+                    kMLInfoDeDup.d2 = dateTimed2;
+                    kMLInfoDeDup.LastPointTimestamp = "";
+                    kMLInfoDeDup.LastLatitude = 0;
+                    kMLInfoDeDup.LastLongitude = 0;
+                    kMLInfoDeDup.LastTotalDistance = 0;
+                    kMLInfoDeDup.LastTotalTime = "";
+                    kMLInfoDeDup.TrackStartTime = "";
+                    await asyncCollectorKMLInfo.AddAsync(kMLInfoDeDup);
+                    //delete Today's blobs
+                    foreach (var blob in helperKMLParse.Blobs)
+                        await helperKMLParse.RemoveKMLBlobAsync(kMLInfoDeDup, StorageContainerConnectionString, blob.BlobName);
                 }
                 //getting always only last point from garmin (except if new day with active tracking has started)
                 HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
-                var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(item);
-                item.LastPoint = kmlFeedresult;
+                var kmlFeedresult = await GetKMLFromGarmin.GetKMLAsync(kMLInfoDeDup);
+                kMLInfoDeDup.LastPoint = kmlFeedresult;
             }
 
             foreach (var kMLInfo in kMLInfos)
             {
-                var kmlFeedresult = kMLInfosDeDuplicate.First(x => x.groupid == kMLInfo.groupid).LastPoint;
+                var kmlFeedresult = kMLInfoDeDups.First(x => x.groupid == kMLInfo.groupid).LastPoint;
                 //if there are new points, then load whole track from database and add the point
                 if (helperKMLParse.IsThereNewPoints(kmlFeedresult, kMLInfo))
                 {
