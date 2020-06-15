@@ -7,14 +7,10 @@ using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.Documents;
 using System.Collections.Generic;
 using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
-    public class Document_self
-    {
-        public string _self { get; set; }
-    }
-
     public static class DeleteInReachFeedFromCosmos
     {
         [FunctionName("DeleteInReachFeedFromCosmos")]
@@ -26,33 +22,41 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 ConnectionStringSetting = "CosmosDBForFree",
                 PartitionKey = "{userWebId}",
                 Id = "{trackId}"
-                )] Document_self document,
+                )] KMLInfo kMLInfo,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users,
+            )] IEnumerable<InReachUser> inReachUsers,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
-            )] DocumentClient client)
+            )] DocumentClient documentClient,
+            ExecutionContext context)
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(context.FunctionAppDirectory)
+                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
+            var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+            HelperKMLParse helperKMLParse = new HelperKMLParse();
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
-            var LoggedInUser = checkUser.LoggedInUser(users, Identities);
+            var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
             var IsAuthenticated = false;
             if (LoggedInUser.status == Status.ExistingUser)
                 IsAuthenticated = true;
 
             if (IsAuthenticated)
             {
-                //using GET and URL querystring parameter "id" to get the document selflink
-                string selfLink = document._self;
-
                 //selfLink is like this: "dbs/auo6AA==/colls/auo6AOdfluE=/docs/auo6AOdfluEnFwIAAAAAAA==/";
-                await client.DeleteDocumentAsync(selfLink, new RequestOptions { PartitionKey = new PartitionKey(LoggedInUser.userWebId) });
+                await documentClient.DeleteDocumentAsync(kMLInfo._self, new RequestOptions { PartitionKey = new PartitionKey(LoggedInUser.userWebId) });
+                //delete blobs
+                foreach (var blob in helperKMLParse.Blobs)
+                    await helperKMLParse.RemoveKMLBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobName);
             }
             return new OkObjectResult(IsAuthenticated);
         }

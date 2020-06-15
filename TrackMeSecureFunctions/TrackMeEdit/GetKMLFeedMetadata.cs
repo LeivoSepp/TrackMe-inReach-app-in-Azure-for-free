@@ -4,10 +4,12 @@ using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.AspNetCore.Http;
 using System.Collections.Generic;
 using System.Security.Claims;
+using Microsoft.Extensions.Configuration;
+using System.Threading.Tasks;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
-    public class KMLmetadata
+    public class KMLData
     {
         public string id { get; set; }
         public string Title { get; set; }
@@ -20,8 +22,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
     public static class GetKMLFeedMetadata
     {
+        private static HelperKMLParse helperKMLParse = new HelperKMLParse();
+
         [FunctionName("GetKMLFeedMetadata")]
-        public static IActionResult Run(
+        public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "GetKMLFeedMetadata/{GroupId}/{id}")] HttpRequest req,
             string GroupId,
              [CosmosDB(
@@ -31,25 +35,45 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 PartitionKey = "{GroupId}",
                 Id = "{id}"
                 )]
-            KMLmetadata input,
+            KMLInfo kMLInfo,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users)
+            )] IEnumerable<InReachUser> inReachUsers,
+            ExecutionContext context)
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(context.FunctionAppDirectory)
+                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
+            var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
-            var LoggedInUser = checkUser.LoggedInUser(users, Identities);
+            var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
             var IsAuthenticated = false;
             if (LoggedInUser.status == Status.ExistingUser)
                 IsAuthenticated = true;
 
+            KMLData kMLData = new KMLData()
+            {
+                id = kMLInfo.id,
+                d1 = kMLInfo.d1,
+                d2 = kMLInfo.d2,
+                Title = kMLInfo.Title,
+                InReachWebAddress = kMLInfo.InReachWebAddress,
+                InReachWebPassword = kMLInfo.InReachWebPassword
+            };
+
+            kMLData.PlannedTrack = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, "plannedtrack");
+
             if (IsAuthenticated)
             {
-                if(GroupId == LoggedInUser.userWebId)
-                    return new OkObjectResult(input);
+                if (GroupId == LoggedInUser.userWebId)
+                    return new OkObjectResult(kMLData);
                 else
                     return new OkObjectResult("Not your track");
             }

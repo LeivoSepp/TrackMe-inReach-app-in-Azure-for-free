@@ -11,6 +11,8 @@ using System.Globalization;
 using System.Security.Claims;
 using System.IO;
 using Newtonsoft.Json;
+using Microsoft.Extensions.Configuration;
+using System.Linq;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -58,18 +60,26 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
                 )]
-                IAsyncCollector<KMLInfo> output,
+                IAsyncCollector<KMLInfo> asyncCollectorKMLInfo,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users
+            )] IEnumerable<InReachUser> inReachUsers,
+            ExecutionContext context
             )
         {
+            var config = new ConfigurationBuilder()
+                .SetBasePath(context.FunctionAppDirectory)
+                .AddJsonFile("local.settings.json", optional: true, reloadOnChange: true)
+                .AddEnvironmentVariables()
+                .Build();
+            var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
-            var LoggedInUser = checkUser.LoggedInUser(users, Identities);
+            var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
             var IsAuthenticated = false;
             if (LoggedInUser.status == Status.ExistingUser)
                 IsAuthenticated = true;
@@ -79,39 +89,57 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
                 if (requestBody != "")
                 {
-                    var fullTrack = JsonConvert.DeserializeObject<KMLInfo>(requestBody);
+                    var kMLFull = JsonConvert.DeserializeObject<KMLFull>(requestBody);
+
+                    KMLInfo kMLInfo = new KMLInfo()
+                    {
+                        id = kMLFull.id,
+                        Title = kMLFull.Title,
+                        d1 = kMLFull.d1,
+                        d2 = kMLFull.d2,
+                        InReachWebAddress = kMLFull.InReachWebAddress,
+                        InReachWebPassword = kMLFull.InReachWebPassword,
+                        UserTimezone = kMLFull.UserTimezone
+                    };
+                    var blobs = helperKMLParse.Blobs;
+                    blobs.ForEach(x => x.BlobValue = "");
+                    blobs.First(x => x.BlobName == "plannedtrack").BlobValue = kMLFull.PlannedTrack;
 
                     //1. replace ö->o ä->a etc
                     //2. first: UrlEncode is removing all weird charactes and spaces
                     //3. second: HttpUtility.UrlEncode is removing some not named weird characters, just in case
                     //4. third: UrlEncode again is removing possible %-marks
                     //setting id field only on initial track creation
-                    if (string.IsNullOrEmpty(fullTrack.id))
+                    if (string.IsNullOrEmpty(kMLInfo.id))
                     {
-                        string id = RemoveDiacritics(fullTrack.Title);
+                        string id = RemoveDiacritics(kMLInfo.Title);
                         id = UrlEncode(HttpUtility.UrlEncode(UrlEncode(id)));
-                        fullTrack.id = id;
+                        kMLInfo.id = id;
                     }
-                    fullTrack.LastPointTimestamp = "";
-                    fullTrack.groupid = LoggedInUser.userWebId;
-                    fullTrack.IsLongTrack = false;
+                    kMLInfo.LastPointTimestamp = "";
+                    kMLInfo.groupid = LoggedInUser.userWebId;
+                    kMLInfo.IsLongTrack = false;
 
-                    var dateD1 = DateTime.Parse(fullTrack.d1).AddHours(-fullTrack.UserTimezone);
-                    var dateD2 = DateTime.Parse(fullTrack.d2).AddDays(1).AddHours(-fullTrack.UserTimezone);
+                    var dateD1 = DateTime.Parse(kMLInfo.d1).AddHours(-kMLInfo.UserTimezone);
+                    var dateD2 = DateTime.Parse(kMLInfo.d2).AddDays(1).AddHours(-kMLInfo.UserTimezone);
                     TimeSpan timeSpan = dateD2 - dateD1;
-                    //this setting affects of parsing all points (slow) or note. Depending on the duration of the track
+                    //this setting affects of parsing all points (slow) or not. Depending on the duration of the track
                     if (timeSpan.TotalDays > 2)
-                        fullTrack.IsLongTrack = true;
+                        kMLInfo.IsLongTrack = true;
 
-                    fullTrack.d1 = dateD1.ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    fullTrack.d2 = dateD2.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfo.d1 = dateD1.ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfo.d2 = dateD2.ToString("yyyy-MM-ddTHH:mm:ssZ");
 
                     HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
                     //get feed grom garmin
-                    var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(fullTrack);
+                    var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(kMLInfo);
+
                     //parse and transform the feed and save to database
-                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, new List<Emails>(), LoggedInUser);
-                    await output.AddAsync(fullTrack);
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, kMLInfo, blobs, new List<Emails>(), LoggedInUser);
+                    await asyncCollectorKMLInfo.AddAsync(kMLInfo);
+                    //save blobs
+                    foreach (var blob in blobs)
+                        await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
                 }
             }
             return new OkObjectResult(IsAuthenticated);

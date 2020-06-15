@@ -19,6 +19,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 {
     public static class GetInReachUser
     {
+        private static HelperKMLParse helperKMLParse = new HelperKMLParse();
+
         [FunctionName("GetInReachUser")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", "post", Route = null)] HttpRequest req,
@@ -27,23 +29,23 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users,
+            )] IEnumerable<InReachUser> inReachUsers,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
-            )] IAsyncCollector<InReachUser> output,
+            )] IAsyncCollector<InReachUser> asyncCollectorInReachUser,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
-           )] DocumentClient client,
+           )] DocumentClient documentClient,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
                 )]
-            IAsyncCollector<KMLInfo> addDocuments,
+            IAsyncCollector<KMLInfo> asyncCollectorKMLInfo,
             ExecutionContext context
             )
         {
@@ -56,11 +58,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var SendEmailFunctionUrl = config["SendEmailFunctionUrl"];
             var WebSiteUrl = config["WebSiteUrl"];
             var TodayTrackId = config["TodayTrackId"];
+            var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
-            var LoggedInUser = checkUser.LoggedInUser(users, Identities);
+            var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
             var IsUserExist = false;
             if (LoggedInUser.status != Status.UserMissing)
                 IsUserExist = true;
@@ -73,26 +77,26 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 {
                     var userDataFromWeb = JsonConvert.DeserializeObject<InReachUser>(requestBody);
                     if (userDataFromWeb.userWebId != LoggedInUser.userWebId)
-                        await ChangePartitionAsync(LoggedInUser.userWebId, userDataFromWeb.userWebId, addDocuments, client, collectionUri); //change partitionIDs
+                        await ChangePartitionAsync(LoggedInUser.userWebId, userDataFromWeb.userWebId, asyncCollectorKMLInfo, documentClient, collectionUri, StorageContainerConnectionString); //change partitionIDs
                     LoggedInUser.InReachWebAddress = userDataFromWeb.InReachWebAddress;
                     LoggedInUser.InReachWebPassword = userDataFromWeb.InReachWebPassword;
                     LoggedInUser.userWebId = userDataFromWeb.userWebId.ToLower();
                     LoggedInUser.Active = userDataFromWeb.Active;
                     LoggedInUser.UserTimezone = userDataFromWeb.UserTimezone;
-                    await ManageTodayTrack(LoggedInUser, addDocuments, client, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl);
+                    await ManageTodayTrack(LoggedInUser, asyncCollectorKMLInfo, documentClient, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl, StorageContainerConnectionString);
                 }
-                await output.AddAsync(LoggedInUser);
+                await asyncCollectorInReachUser.AddAsync(LoggedInUser);
             }
             return new OkObjectResult(LoggedInUser);
         }
-        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string TodayTrackId, string SendEmailFunctionUrl, string SendEmailFunctionKey, string WebSiteUrl)
+        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string TodayTrackId, string SendEmailFunctionUrl, string SendEmailFunctionKey, string WebSiteUrl, string StorageContainerConnectionString)
         {
             var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
             var dated2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
             var dateTimed1 = DateTime.Parse(dated1).AddHours(-LoggedInUser.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
             var dateTimed2 = DateTime.Parse(dated2).AddDays(1).AddHours(-LoggedInUser.UserTimezone).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-            KMLInfo TodayTrack = new KMLInfo()
+            KMLInfo kMLInfo = new KMLInfo()
             {
                 id = TodayTrackId,
                 Title = "Today's track",
@@ -108,14 +112,17 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             if (LoggedInUser.Active)
             {
                 HelperGetKMLFromGarmin helperGetKMLFromGarmin = new HelperGetKMLFromGarmin();
-                HelperKMLParse helperKMLParse = new HelperKMLParse();
 
                 var emails = new List<Emails>();
                 //get feed grom garmin
-                var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(TodayTrack);
+                var kmlFeedresult = await helperGetKMLFromGarmin.GetKMLAsync(kMLInfo);
+                var blobs = helperKMLParse.Blobs;
                 //parse and transform the feed and save to database
-                helperKMLParse.ParseKMLFile(kmlFeedresult, TodayTrack, emails, LoggedInUser, WebSiteUrl);
-                await addDocuments.AddAsync(TodayTrack);
+                helperKMLParse.ParseKMLFile(kmlFeedresult, kMLInfo, blobs, emails, LoggedInUser, WebSiteUrl);
+                await addDocuments.AddAsync(kMLInfo);
+                //save blobs
+                foreach (var blob in blobs)
+                    await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
 
                 //sending out emails
                 if (emails.Any())
@@ -123,35 +130,41 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     HttpClient httpClient = new HttpClient();
                     Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
                     var returnMessage = await httpClient.PostAsJsonAsync(SendEmailFunctionUri, emails);
-                    //var lastMessage = await returnMessage.Content.ReadAsStringAsync();
                 }
             }
             //delete Today's track
             if (!LoggedInUser.Active)
             {
                 //select and delete document
-                var queryOne = new SqlQuerySpec("SELECT c._self, c.groupid FROM c WHERE c.id = @id",
-                    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = TodayTrack.id } }));
-                Document trackItem = client.CreateDocumentQuery(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) }).AsEnumerable().FirstOrDefault();
-                if (!(trackItem is null))
-                    await client.DeleteDocumentAsync(trackItem.SelfLink, new RequestOptions { PartitionKey = new PartitionKey(TodayTrack.groupid) });
+                var queryOne = new SqlQuerySpec("SELECT c._self, c.groupid, c.id FROM c WHERE c.id = @id",
+                    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = kMLInfo.id } }));
+                KMLInfo kML = client.CreateDocumentQuery(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(kMLInfo.groupid) }).AsEnumerable().FirstOrDefault();
+                if (!(kML is null))
+                {
+                    //delete metadata
+                    await client.DeleteDocumentAsync(kML._self, new RequestOptions { PartitionKey = new PartitionKey(kML.groupid) });
+                    //delete blobs
+                    foreach (var blob in helperKMLParse.Blobs)
+                        await helperKMLParse.RemoveKMLBlobAsync(kML, StorageContainerConnectionString, blob.BlobName);
+                }
             }
         }
-        static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri)
+        static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string StorageContainerConnectionString)
         {
             //getting active tracks from cosmos
             var query = new SqlQuerySpec("SELECT * FROM c WHERE c.groupid = @groupid",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@groupid", Value = userWebId } }));
-            IEnumerable<KMLInfo> TracksMetadata = client.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { PartitionKey = new PartitionKey(userWebId) }).AsEnumerable();
-            foreach (KMLInfo item in TracksMetadata)
+            IEnumerable<KMLInfo> kMLInfos = client.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { PartitionKey = new PartitionKey(userWebId) }).AsEnumerable();
+            foreach (KMLInfo kMLInfo in kMLInfos)
             {
-                item.groupid = newUserWebId;
-                item.d1 = DateTime.Parse(item.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                item.d2 = DateTime.Parse(item.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                item.LastPointTimestamp = DateTime.Parse(item.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                await addDocuments.AddAsync(item);
-                await client.DeleteDocumentAsync(item._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
+                kMLInfo.groupid = newUserWebId;
+                kMLInfo.d1 = DateTime.Parse(kMLInfo.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                kMLInfo.d2 = DateTime.Parse(kMLInfo.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                kMLInfo.LastPointTimestamp = DateTime.Parse(kMLInfo.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                await addDocuments.AddAsync(kMLInfo);
+                await client.DeleteDocumentAsync(kMLInfo._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
             }
+            await helperKMLParse.RenameKMLBlobAsync(userWebId, newUserWebId, StorageContainerConnectionString);
         }
     }
     public class InReachUser

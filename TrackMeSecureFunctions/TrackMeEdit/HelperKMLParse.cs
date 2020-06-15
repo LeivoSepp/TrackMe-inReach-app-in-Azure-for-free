@@ -2,10 +2,13 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Xml;
 using System.Xml.Linq;
 using System.Xml.XPath;
 using GeoCoordinatePortable;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 //google map icons: http://kml4earth.appspot.com/icons.html
 
@@ -174,7 +177,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 return true;
             return false;
         }
-        public bool ParseKMLFile(string kmlFeedresult, KMLInfo fullTrack, List<Emails> emails, InReachUser user = null, string webSiteUrl = "")
+        public bool ParseKMLFile(string kmlFeedresult, KMLInfo kMLInfo, List<Blob> blobs, List<Emails> emails, InReachUser user = null, string webSiteUrl = "")
         {
             //open and parse KMLfeed
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
@@ -232,24 +235,27 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         new XElement(defaultns + "LineString",
                             new XElement(defaultns + "coordinates"
                 ))));
+            var PlacemarksAll = blobs.First(x => x.BlobName == "placemarksall").BlobValue;
+            var PlacemarksMsg = blobs.First(x => x.BlobName == "placemarksmsg").BlobValue;
+            var TrackLine = blobs.First(x => x.BlobName == "trackline").BlobValue;
 
             //create Xdocuments if they are empty
-            if (!string.IsNullOrEmpty(fullTrack.PlacemarksAll))
-                xmlPlacemarks = XDocument.Parse(fullTrack.PlacemarksAll);
+            if (!string.IsNullOrEmpty(PlacemarksAll))
+                xmlPlacemarks = XDocument.Parse(PlacemarksAll);
             else
             {
                 xmlPlacemarks = new XDocument(new XElement(newDoc));
                 AddStyles(xmlPlacemarks.XPathSelectElement("//kml:Document", ns), defaultns);
             }
-            if (!string.IsNullOrEmpty(fullTrack.PlacemarksWithMessages))
-                xmlPlacemarksWithMessages = XDocument.Parse(fullTrack.PlacemarksWithMessages);
+            if (!string.IsNullOrEmpty(PlacemarksMsg))
+                xmlPlacemarksWithMessages = XDocument.Parse(PlacemarksMsg);
             else
             {
                 xmlPlacemarksWithMessages = new XDocument(new XElement(newDoc));
                 AddStyles(xmlPlacemarksWithMessages.XPathSelectElement("//kml:Document", ns), defaultns);
             }
-            if (!string.IsNullOrEmpty(fullTrack.LineString))
-                xmlLineString = XDocument.Parse(fullTrack.LineString);
+            if (!string.IsNullOrEmpty(TrackLine))
+                xmlLineString = XDocument.Parse(TrackLine);
             else
             {
                 xmlLineString = new XDocument(new XElement(newDoc));
@@ -263,11 +269,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             //set placemark as a root element            
             var placemarks = xmlTrack.XPathSelectElements("//kml:Placemark", ns);
 
-            double lastLatitude = fullTrack.LastLatitude;
-            double lastLongitude = fullTrack.LastLongitude;
-            double totalDistance = fullTrack.LastTotalDistance;
+            double lastLatitude = kMLInfo.LastLatitude;
+            double lastLongitude = kMLInfo.LastLongitude;
+            double totalDistance = kMLInfo.LastTotalDistance;
             TimeSpan totalTime = new TimeSpan();
-            TimeSpan.TryParse(fullTrack.LastTotalTime, out totalTime);
+            TimeSpan.TryParse(kMLInfo.LastTotalTime, out totalTime);
 
             DateTime lastDate = new DateTime();
             var lineStringMessage = string.Empty;
@@ -354,25 +360,25 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     {
                         NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value = InReachEvents[0];
                         trackStarted = lastDate;
-                        if (string.IsNullOrEmpty(fullTrack.TrackStartTime))
-                            fullTrack.TrackStartTime = trackStarted.ToString("HH:mm dd.MM.yyyy");
+                        if (string.IsNullOrEmpty(kMLInfo.TrackStartTime))
+                            kMLInfo.TrackStartTime = trackStarted.ToString("HH:mm dd.MM.yyyy");
                     }
 
                     //get the sender name as a Garmin Map Display Name. Not used.
                     //var senderName = placemark.XPathSelectElement("./kml:ExtendedData/kml:Data[@name = 'Map Display Name']/kml:value", ns).Value;
 
                     var inReachMessage = NewPlacemark.XPathSelectElement("//kml:ExtendedData/kml:Data[@name = 'Text']/kml:value", ns).Value;
-                    lineStringMessage = $"Track started on {fullTrack.TrackStartTime}.<br>Total distance traveled { distance} in { totalTimeStr}.";
-                    var eMailMessage = $"Hello, <br><br><h3>{user.name} is on {fullTrack.Title}.</h3>" +
+                    lineStringMessage = $"Track started on {kMLInfo.TrackStartTime}.<br>Total distance traveled { distance} in { totalTimeStr}.";
+                    var eMailMessage = $"Hello, <br><br><h3>{user.name} is on {kMLInfo.Title}.</h3>" +
                         $"What just happened? <b>{inReachMessage}</b>.<br>" +
                         $"{lineStringMessage}<br>" +
-                        $"Follow me on the map <a href='{webSiteUrl}/{fullTrack.groupid}?id={fullTrack.id}'></a>{webSiteUrl}/{fullTrack.groupid}<br><br>" +
+                        $"Follow me on the map <a href='{webSiteUrl}/{kMLInfo.groupid}?id={kMLInfo.id}'></a>{webSiteUrl}/{kMLInfo.groupid}<br><br>" +
                         $"This message was sent in {lastDate:HH:mm dd.MM.yyyy}, at location LatLon: {lastLatitude}, {lastLongitude}. " +
                         $"<a href='https://www.google.com/maps/search/?api=1&query={lastLatitude},{lastLongitude}'>Open in google maps</a>.<br><br>" +
                         $"Best regards,<br>Whoever is carrying this device.<br><br>" +
                         $"<small>Disclaimer<br>" +
                         $"You are getting this e-mail because you subscribed to receive {user.name} inReach messages.<br>" +
-                        $"Click here to unsubscribe:<a href='{webSiteUrl}/unsubscribe?userWebId={fullTrack.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
+                        $"Click here to unsubscribe:<a href='{webSiteUrl}/unsubscribe?userWebId={kMLInfo.groupid}'>Remove me from {user.name} inReach notifications</a>.<br>" +
                         $"Sorry! It's not working yet. You cannot unsubscribe. You have to follow me forever.</small>";
                     var eMailSubject = $"{user.name} at {lastDate:HH:mm}: {inReachMessage}";
                     //if inReach has sent out a message then add a Placemark
@@ -384,7 +390,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         {
                             EmailBody = eMailMessage,
                             EmailSubject = eMailSubject,
-                            UserWebId = fullTrack.groupid,
+                            UserWebId = kMLInfo.groupid,
                             DateTime = dateTimeString,
                             EmailFrom = user.email,
                             Name = user.name,
@@ -392,7 +398,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         });
                     }
                     //add full placemarks only for short less than 1 day tracks 
-                    if (!fullTrack.IsLongTrack)
+                    if (!kMLInfo.IsLongTrack)
                         documentPlacemark.Add(new XElement(NewPlacemark));
                     //else
                     //{
@@ -406,23 +412,93 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     string Coordinates = ReturnValue(xmlLineString.XPathSelectElement("//kml:Placemark/kml:LineString/kml:coordinates", ns));
                     Coordinates = Coordinates + "\r\n" + NewCoordinates;
                     xmlLineString.XPathSelectElement("//kml:Placemark/kml:LineString/kml:coordinates", ns).Value = Coordinates;
-                    xmlLineString.XPathSelectElement("//kml:Placemark/kml:name", ns).Value = fullTrack.Title;
+                    xmlLineString.XPathSelectElement("//kml:Placemark/kml:name", ns).Value = kMLInfo.Title;
                     xmlLineString.XPathSelectElement("//kml:Placemark/kml:description", ns).Value = lineStringMessage;
                 }
             }
-            fullTrack.LastTotalDistance = totalDistance;
-            fullTrack.LastLatitude = lastLatitude;
-            fullTrack.LastLongitude = lastLongitude;
-            fullTrack.LastTotalTime = totalTime.ToString();
-            fullTrack.LastPointTimestamp = LastPointTimestamp;
-            fullTrack.PlacemarksWithMessages = xmlString + xmlPlacemarksWithMessages.ToString();
-            fullTrack.LineString = xmlString + xmlLineString.ToString();
-            //add full placemarks only for short less than 1 day tracks 
-            if (!fullTrack.IsLongTrack)
-                fullTrack.PlacemarksAll = xmlString + xmlPlacemarks.ToString();
+            kMLInfo.LastTotalDistance = totalDistance;
+            kMLInfo.LastLatitude = lastLatitude;
+            kMLInfo.LastLongitude = lastLongitude;
+            kMLInfo.LastTotalTime = totalTime.ToString();
+            kMLInfo.LastPointTimestamp = LastPointTimestamp;
+
+            PlacemarksMsg = xmlString + xmlPlacemarksWithMessages.ToString();
+            TrackLine = xmlString + xmlLineString.ToString();
+            //add full placemarks only for track with duration less than 2 day
+            if (!kMLInfo.IsLongTrack)
+                PlacemarksAll = xmlString + xmlPlacemarks.ToString();
+
+            blobs.First(x => x.BlobName == "trackline").BlobValue = TrackLine;
+            blobs.First(x => x.BlobName == "placemarksall").BlobValue = PlacemarksAll;
+            blobs.First(x => x.BlobName == "placemarksmsg").BlobValue = PlacemarksMsg;
 
             return true;
         }
+        public async Task AddKMLToBlobAsync(KMLInfo kMLInfo, string blobValue, string StorageContainerConnectionString, string blobName)
+        {
+            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("tracks");
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            await blockBlob.UploadTextAsync(blobValue);
+        }
+        public async Task<string> GetKMLFromBlobAsync(KMLInfo kMLInfo, string StorageContainerConnectionString, string blobName)
+        {
+            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("tracks");
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            if (await blockBlob.ExistsAsync())
+                return await blockBlob.DownloadTextAsync();
+            return null;
+        }
+        public async Task RemoveKMLBlobAsync(KMLInfo kMLInfo, string StorageContainerConnectionString, string blobName)
+        {
+            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("tracks");
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            await blockBlob.DeleteIfExistsAsync();
+        }
+        public async Task RenameKMLBlobAsync(string userWebId, string newUserWebId, string StorageContainerConnectionString)
+        {
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+            CloudBlobContainer container = blobClient.GetContainerReference("tracks");
+            CloudBlockBlob source = (CloudBlockBlob)await container.GetBlobReferenceFromServerAsync(userWebId);
+            CloudBlockBlob target = container.GetBlockBlobReference(newUserWebId);
+
+            await target.StartCopyAsync(source);
+
+            while (target.CopyState.Status == CopyStatus.Pending)
+                await Task.Delay(100);
+
+            if (target.CopyState.Status != CopyStatus.Success)
+                throw new Exception("Rename failed: " + target.CopyState.Status);
+
+            await source.DeleteAsync();
+        }
+
+        public List<Blob> Blobs = new List<Blob>()
+        {
+            new Blob("trackline", ""),
+            new Blob("placemarksall", ""),
+            new Blob("placemarksmsg", ""),
+            new Blob("plannedtrack", ""),
+        };
+    }
+    public class Blob
+    {
+        public Blob(string BlobName, string BlobValue)
+        {
+            this.BlobName = BlobName;
+            this.BlobValue = BlobValue;
+        }
+        public string BlobName;
+        public string BlobValue;
     }
 
     public class KMLInfo
@@ -443,13 +519,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string TrackStartTime { get; set; }
         public string LastPoint { get; set; }
         public bool IsLongTrack { get; set; }
-        public string PlannedTrack { get; set; }
-        public string PlacemarksAll { get; set; }
-        public string PlacemarksWithMessages { get; set; }
-        public string LineString { get; set; }
         public string _self { get; set; }
     }
-
     public class Emails
     {
         public string EmailSubject { get; set; }
@@ -460,4 +531,29 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         public string EmailFrom { get; set; }
         public string[] EmailTo { get; set; }
     }
+    public class KMLFull
+    {
+        public string id { get; set; }
+        public string Title { get; set; }
+        public string d1 { get; set; }
+        public string d2 { get; set; }
+        public string InReachWebAddress { get; set; }
+        public string InReachWebPassword { get; set; }
+        public string groupid { get; set; }
+        public int UserTimezone { get; set; }
+        public string LastPointTimestamp { get; set; }
+        public double LastLatitude { get; set; }
+        public double LastLongitude { get; set; }
+        public double LastTotalDistance { get; set; }
+        public string LastTotalTime { get; set; }
+        public string TrackStartTime { get; set; }
+        public string LastPoint { get; set; }
+        public bool IsLongTrack { get; set; }
+        public string _self { get; set; }
+        public string PlannedTrack { get; set; }
+        public string PlacemarksAll { get; set; }
+        public string PlacemarksWithMessages { get; set; }
+        public string LineString { get; set; }
+    }
+
 }

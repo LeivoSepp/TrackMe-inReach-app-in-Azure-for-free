@@ -1,5 +1,12 @@
 {
   "proxies": {
+    "readtracks": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/tracks/{*kml}"
+      },
+      "backendUri": "https://trackme.blob.core.windows.net/tracks/{kml}"
+    },
     "home": {
       "matchCondition": {
         "methods": [ "GET" ],

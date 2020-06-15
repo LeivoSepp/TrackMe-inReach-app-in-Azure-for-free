@@ -32,15 +32,15 @@ namespace TrackMePublicFunctions.TrackMe
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user' and c.userWebId = {userWebId}"
-            )] IEnumerable<InReachUser> users,
+            )] IEnumerable<InReachUser> inReachUsers,
             [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
-            )] IAsyncCollector<InReachUser> output
+            )] IAsyncCollector<InReachUser> asyncCollectorInReachUser
             )
         {
-            InReachUser user = users.First();
+            InReachUser user = inReachUsers.First();
 
             if (user.subscibers == null)
             {
@@ -55,7 +55,7 @@ namespace TrackMePublicFunctions.TrackMe
                 user.subscibers.Add(email);
             }
             
-            await output.AddAsync(user);
+            await asyncCollectorInReachUser.AddAsync(user);
 
             return new OkObjectResult(email);
         }

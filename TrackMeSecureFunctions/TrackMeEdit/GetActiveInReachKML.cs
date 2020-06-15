@@ -16,13 +16,13 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         private static HelperKMLParse helperKMLParse = new HelperKMLParse();
 
         [FunctionName("GetActiveInReachKML")]
-        public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
+        public static async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer,
         [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree"
                 )]
-             IAsyncCollector<KMLInfo> output,
+             IAsyncCollector<KMLInfo> asyncCollectorKMLInfo,
            [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
@@ -33,7 +33,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 collectionName: "TrackMe",
                 ConnectionStringSetting = "CosmosDBForFree",
                 SqlQuery = "SELECT * FROM c WHERE c.groupid = 'user'"
-            )] IEnumerable<InReachUser> users,
+            )] IEnumerable<InReachUser> inReachUsers,
             ExecutionContext context)
         {
             var config = new ConfigurationBuilder()
@@ -45,6 +45,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var SendEmailFunctionUrl = config["SendEmailFunctionUrl"];
             var WebSiteUrl = config["WebSiteUrl"];
             var TodayTrackId = config["TodayTrackId"];
+            var StorageContainerConnectionString = config["StorageContainerConnectionString"];
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             List<Emails> emails = new List<Emails>();
@@ -52,15 +53,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             DateTime dateTimeUTC = DateTime.UtcNow.ToUniversalTime();
 
             //getting active tracks from CosmosDB
-            var query = new SqlQuerySpec("SELECT c.id, c.d1, c.Title, c.groupid, c.UserTimezone, c.LastPointTimestamp, c.InReachWebAddress, c.InReachWebPassword FROM c WHERE (c.d1 < @dateTimeUTC and c.d2 > @dateTimeUTC) or c.id = @TodayTrack",
+            var query = new SqlQuerySpec("SELECT * FROM c WHERE (c.d1 < @dateTimeUTC and c.d2 > @dateTimeUTC) or c.id = @TodayTrack",
                 new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@dateTimeUTC", Value = dateTimeUTC }, new SqlParameter { Name = "@TodayTrack", Value = TodayTrackId } }));
-            IEnumerable<KMLInfo> TracksMetadata = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
+            IEnumerable<KMLInfo> kMLInfos = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, query, new FeedOptions { EnableCrossPartitionQuery = true }).AsEnumerable();
 
-            //remove all duplicates by LastPointTimestamp and groupid field to make only one query to Garmin per user (if user has multiple tracks in same time)
-            IEnumerable<KMLInfo> TracksListDeDuplicate = TracksMetadata.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
+            //remove all duplicates by LastPointTimestamp and groupid field to make only one query to Garmin per user (if user has multiple Live tracks in same time)
+            IEnumerable<KMLInfo> kMLInfosDeDuplicate = kMLInfos.GroupBy(x => new { x.LastPointTimestamp, x.groupid }).Select(x => x.First()).ToList();
 
             //getting feed from garmin, one feed for each user if LastpointTimestamp is same
-            foreach (var item in TracksListDeDuplicate)
+            foreach (var item in kMLInfosDeDuplicate)
             {
                 DateTime lastd1 = DateTime.SpecifyKind(DateTime.Parse(item.d1, CultureInfo.InvariantCulture), DateTimeKind.Utc);
                 DateTime today = DateTime.UtcNow.ToUniversalTime().AddDays(-1);
@@ -80,7 +81,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     item.d1 = dateTimed1;
                     item.d2 = dateTimed2;
                     item.LastPointTimestamp = "";
-                    await output.AddAsync(item);
+                    await asyncCollectorKMLInfo.AddAsync(item);
                 }
                 //getting always only last point from garmin (except if new day with active tracking has started)
                 HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
@@ -88,32 +89,40 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 item.LastPoint = kmlFeedresult;
             }
 
-            foreach (var item in TracksMetadata)
+            foreach (var kMLInfo in kMLInfos)
             {
-                var kmlFeedresult = TracksListDeDuplicate.First(x => x.groupid == item.groupid).LastPoint;
+                var kmlFeedresult = kMLInfosDeDuplicate.First(x => x.groupid == kMLInfo.groupid).LastPoint;
                 //if there are new points, then load whole track from database and add the point
-                if (helperKMLParse.IsThereNewPoints(kmlFeedresult, item))
+                if (helperKMLParse.IsThereNewPoints(kmlFeedresult, kMLInfo))
                 {
-                    var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
-                        new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
-                    KMLInfo fullTrack = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
+                    //var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
+                    //    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
+                    //KMLInfo kMLInfo = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
 
                     var user = new InReachUser();
-                    foreach (var usr in users)
+                    foreach (var usr in inReachUsers)
                     {
-                        if (usr.userWebId == fullTrack.groupid)
+                        if (usr.userWebId == kMLInfo.groupid)
                         {
                             user = usr;
                             break;
                         }
                     }
+                    //open KML feeds from Blobstorage
+                    var blobs = helperKMLParse.Blobs;
+                    foreach (var blob in blobs)
+                        blob.BlobValue = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobValue);
+
                     //process the full track
-                    helperKMLParse.ParseKMLFile(kmlFeedresult, fullTrack, emails, user, WebSiteUrl);
+                    helperKMLParse.ParseKMLFile(kmlFeedresult, kMLInfo, blobs, emails, user, WebSiteUrl);
 
-                    fullTrack.d1 = DateTime.Parse(fullTrack.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                    fullTrack.d2 = DateTime.Parse(fullTrack.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfo.d1 = DateTime.Parse(kMLInfo.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                    kMLInfo.d2 = DateTime.Parse(kMLInfo.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
 
-                    await output.AddAsync(fullTrack);
+                    await asyncCollectorKMLInfo.AddAsync(kMLInfo);
+                    //save blobs
+                    foreach (var blob in blobs)
+                        await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
                 }
             }
 
@@ -124,7 +133,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 HttpClient client = new HttpClient();
                 Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
                 var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emails);
-                //var lastMessage = await returnMessage.Content.ReadAsStringAsync();
             }
         }
     }

@@ -7,7 +7,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 {
     class HelperCheckUser
     {
-        public InReachUser LoggedInUser(IEnumerable<InReachUser> users, ClaimsPrincipal Identities)
+        public InReachUser LoggedInUser(IEnumerable<InReachUser> inReachUsers, ClaimsPrincipal Identities)
         {
             var loggedInUser = new InReachUser
             {
@@ -20,7 +20,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var TrackMeUser = loggedInUser;
             if (loggedInUser.id != null && loggedInUser.email != null)
             {
-                foreach (var user in users)
+                foreach (var user in inReachUsers)
                 {
                     if (user.id == loggedInUser.id)
                     {
