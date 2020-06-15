@@ -146,19 +146,18 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                         newLastPoint = compareDate;
                 }
             }
-            return newLastPoint.ToString("o");
+            return newLastPoint.ToString("yyyy-MM-ddTHH:mm:ssZ");
         }
         bool IsDate1BiggerThanDate2(string NewLastPointTime, string LastPointTimestamp)
         {
-            DateTime dTLast, dTNew;
-            if (string.IsNullOrEmpty(LastPointTimestamp))
-                dTLast = new DateTime(2000, 1, 1);
-            else
+            DateTime dTLast = new DateTime();
+            DateTime dTNew = DateTime.UtcNow.ToUniversalTime(); 
+
+            if (!string.IsNullOrEmpty(LastPointTimestamp))
                 dTLast = DateTime.SpecifyKind(DateTime.Parse(LastPointTimestamp, CultureInfo.CreateSpecificCulture("en-US")), DateTimeKind.Utc);
-            if (string.IsNullOrEmpty(NewLastPointTime))
-                dTNew = DateTime.UtcNow.ToUniversalTime();
-            else
+            if (!string.IsNullOrEmpty(NewLastPointTime))
                 dTNew = DateTime.Parse(NewLastPointTime).ToUniversalTime();
+
             if (dTNew > dTLast)
                 return true;
             return false;
@@ -172,8 +171,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
             //set placemark as a root element
             var placemarks = xmlTrack.XPathSelectElements("//kml:Placemark", ns);
-            track.LastPointTimestamp = NewLastTimestamp(placemarks, ns);
-            if (IsDate1BiggerThanDate2(track.LastPointTimestamp, LastPointts))
+             var LastPointTimestamp = NewLastTimestamp(placemarks, ns);
+            if (IsDate1BiggerThanDate2(LastPointTimestamp, LastPointts))
                 return true;
             return false;
         }
@@ -275,7 +274,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             TimeSpan totalTime = new TimeSpan();
             TimeSpan.TryParse(kMLInfo.LastTotalTime, out totalTime);
 
+            var lastpointTs = kMLInfo.LastPointTimestamp;
             DateTime lastDate = new DateTime();
+            if (!string.IsNullOrEmpty(lastpointTs))
+                lastDate = DateTime.Parse(lastpointTs, CultureInfo.InvariantCulture).AddHours(kMLInfo.UserTimezone);
             var lineStringMessage = string.Empty;
             DateTime trackStarted = new DateTime();
             var LastPointTimestamp = string.Empty;
@@ -441,7 +443,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
             CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
-            await blockBlob.UploadTextAsync(blobValue);
+            if(!string.IsNullOrEmpty(blobValue))
+                await blockBlob.UploadTextAsync(blobValue);
         }
         public async Task<string> GetKMLFromBlobAsync(KMLInfo kMLInfo, string StorageContainerConnectionString, string blobName)
         {

@@ -16,7 +16,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         private static HelperKMLParse helperKMLParse = new HelperKMLParse();
 
         [FunctionName("GetActiveInReachKML")]
-        public static async Task Run([TimerTrigger("0 */1 * * * *")] TimerInfo myTimer,
+        public static async Task Run([TimerTrigger("0 */5 * * * *")] TimerInfo myTimer,
         [CosmosDB(
                 databaseName: "FreeCosmosDB",
                 collectionName: "TrackMe",
@@ -95,10 +95,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 //if there are new points, then load whole track from database and add the point
                 if (helperKMLParse.IsThereNewPoints(kmlFeedresult, kMLInfo))
                 {
-                    //var queryOne = new SqlQuerySpec("SELECT * FROM c WHERE c.id = @id",
-                    //    new SqlParameterCollection(new SqlParameter[] { new SqlParameter { Name = "@id", Value = item.id } }));
-                    //KMLInfo kMLInfo = documentClient.CreateDocumentQuery<KMLInfo>(collectionUri, queryOne, new FeedOptions { PartitionKey = new PartitionKey(item.groupid) }).AsEnumerable().FirstOrDefault();
-
                     var user = new InReachUser();
                     foreach (var usr in inReachUsers)
                     {
@@ -111,7 +107,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //open KML feeds from Blobstorage
                     var blobs = helperKMLParse.Blobs;
                     foreach (var blob in blobs)
-                        blob.BlobValue = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobValue);
+                        blob.BlobValue = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobName);
 
                     //process the full track
                     helperKMLParse.ParseKMLFile(kmlFeedresult, kMLInfo, blobs, emails, user, WebSiteUrl);
