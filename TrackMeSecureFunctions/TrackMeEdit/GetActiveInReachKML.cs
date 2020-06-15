@@ -128,7 +128,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 List<Emails> emailList = emails.GroupBy(x => x.DateTime).Select(x => x.First()).ToList();
                 HttpClient client = new HttpClient();
                 Uri SendEmailFunctionUri = new Uri($"{SendEmailFunctionUrl}?code={SendEmailFunctionKey}");
-                var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emails);
+                var returnMessage = await client.PostAsJsonAsync(SendEmailFunctionUri, emailList);
             }
         }
     }
