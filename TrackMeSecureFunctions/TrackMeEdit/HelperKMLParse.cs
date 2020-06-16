@@ -115,13 +115,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             }
             return Document;
         }
-        //get server-based date-time and calculate it to specific timezone
-        //public DateTime GetLocalTime(string timezone)
-        //{
-        //    //timezone: "FLE Standard Time"
-        //    var TimezoneCorrected = TimeZoneInfo.FindSystemTimeZoneById(timezone);
-        //    return TimeZoneInfo.ConvertTime(DateTime.UtcNow, TimezoneCorrected);
-        //}
         string ReturnValue(XElement element)
         {
             var checkFolder = element;
@@ -131,48 +124,43 @@ namespace TrackMeSecureFunctions.TrackMeEdit
         }
         string NewLastTimestamp(IEnumerable<XElement> placemarks, XmlNamespaceManager ns)
         {
-            DateTime newLastPoint = new DateTime(2000, 1, 1);
-            DateTime compareDate;
-            string compareString;
+            DateTime newLastPoint = new DateTime();
+            DateTime timestampDate;
+            string timestampString;
             foreach (var item in placemarks)
             {
                 //Placemarks without ExtendedData not proceed
                 var check = item.XPathSelectElement("./kml:ExtendedData", ns);
                 if (check != null)
                 {
-                    compareString = ReturnValue(item.XPathSelectElement("./kml:TimeStamp/kml:when", ns));
-                    compareDate = DateTime.Parse(compareString).ToUniversalTime();
-                    if (compareDate > newLastPoint)
-                        newLastPoint = compareDate;
+                    timestampString = ReturnValue(item.XPathSelectElement("./kml:TimeStamp/kml:when", ns));
+                    timestampDate = DateTime.Parse(timestampString).ToUniversalTime();
+                    if (timestampDate > newLastPoint)
+                        newLastPoint = timestampDate;
                 }
             }
             return newLastPoint.ToString("yyyy-MM-ddTHH:mm:ssZ");
         }
-        bool IsDate1BiggerThanDate2(string NewLastPointTime, string LastPointTimestamp)
-        {
-            DateTime dTLast = new DateTime();
-            DateTime dTNew = DateTime.UtcNow.ToUniversalTime(); 
-
-            if (!string.IsNullOrEmpty(LastPointTimestamp))
-                dTLast = DateTime.SpecifyKind(DateTime.Parse(LastPointTimestamp, CultureInfo.CreateSpecificCulture("en-US")), DateTimeKind.Utc);
-            if (!string.IsNullOrEmpty(NewLastPointTime))
-                dTNew = DateTime.Parse(NewLastPointTime).ToUniversalTime();
-
-            if (dTNew > dTLast)
-                return true;
-            return false;
-        }
         public bool IsThereNewPoints(string kmlFeedresult, KMLInfo track)
         {
-            string LastPointts = track.LastPointTimestamp;
+            string LastPointTime = track.LastPointTimestamp;
             XDocument xmlTrack = XDocument.Parse(kmlFeedresult);
             XmlNamespaceManager ns = new XmlNamespaceManager(new NameTable());
             ns.AddNamespace("kml", "http://www.opengis.net/kml/2.2");
 
             //set placemark as a root element
             var placemarks = xmlTrack.XPathSelectElements("//kml:Placemark", ns);
-             var LastPointTimestamp = NewLastTimestamp(placemarks, ns);
-            if (IsDate1BiggerThanDate2(LastPointTimestamp, LastPointts))
+            var NewLastPointTime = NewLastTimestamp(placemarks, ns);
+
+            DateTime dTLast = new DateTime();
+            DateTime dTNew = DateTime.UtcNow.ToUniversalTime();
+
+            if (!string.IsNullOrEmpty(NewLastPointTime))
+                dTNew = DateTime.Parse(NewLastPointTime).ToUniversalTime();
+            if (!string.IsNullOrEmpty(LastPointTime))
+                dTLast = DateTime.SpecifyKind(DateTime.Parse(LastPointTime, CultureInfo.CreateSpecificCulture("en-US")), DateTimeKind.Utc);
+
+            if (dTNew > dTLast)
                 return true;
             return false;
         }
@@ -402,10 +390,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //add full placemarks only for short less than 1 day tracks 
                     if (!kMLInfo.IsLongTrack)
                         documentPlacemark.Add(new XElement(NewPlacemark));
-                    //else
-                    //{
-
-                    //}
                 }
                 else
                 {
