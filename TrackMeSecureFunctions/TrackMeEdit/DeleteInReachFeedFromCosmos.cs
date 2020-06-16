@@ -8,6 +8,8 @@ using Microsoft.Azure.Documents;
 using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -42,6 +44,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 .AddEnvironmentVariables()
                 .Build();
             var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
             HelperKMLParse helperKMLParse = new HelperKMLParse();
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
@@ -56,7 +61,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 await documentClient.DeleteDocumentAsync(kMLInfo._self, new RequestOptions { PartitionKey = new PartitionKey(LoggedInUser.userWebId) });
                 //delete blobs
                 foreach (var blob in helperKMLParse.Blobs)
-                    await helperKMLParse.RemoveKMLBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobName);
+                {
+                    var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/{blob.BlobName}.kml";
+                    await helperKMLParse.RemoveBlobAsync(blobName, blobClient);
+                }
             }
             return new OkObjectResult(IsAuthenticated);
         }

@@ -13,6 +13,8 @@ using System.IO;
 using Newtonsoft.Json;
 using Microsoft.Extensions.Configuration;
 using System.Linq;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -77,6 +79,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 .Build();
             var StorageContainerConnectionString = config["StorageContainerConnectionString"];
 
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
             var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
@@ -139,7 +144,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     await asyncCollectorKMLInfo.AddAsync(kMLInfo);
                     //save blobs
                     foreach (var blob in blobs)
-                        await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
+                    {
+                        var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/{blob.BlobName}.kml";
+                        await helperKMLParse.AddToBlobAsync(blobName, blob.BlobValue, blobClient);
+                    }
                 }
             }
             return new OkObjectResult(IsAuthenticated);

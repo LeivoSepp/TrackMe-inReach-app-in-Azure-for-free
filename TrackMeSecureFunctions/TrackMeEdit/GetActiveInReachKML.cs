@@ -8,6 +8,8 @@ using Microsoft.Azure.Documents;
 using Microsoft.Azure.Documents.Client;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Extensions.Configuration;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -46,6 +48,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var WebSiteUrl = config["WebSiteUrl"];
             var TodayTrackId = config["TodayTrackId"];
             var StorageContainerConnectionString = config["StorageContainerConnectionString"];
+
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             List<Emails> emails = new List<Emails>();
@@ -89,7 +94,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     await asyncCollectorKMLInfo.AddAsync(kMLInfoDeDup);
                     //delete Today's blobs
                     foreach (var blob in helperKMLParse.Blobs)
-                        await helperKMLParse.RemoveKMLBlobAsync(kMLInfoDeDup, StorageContainerConnectionString, blob.BlobName);
+                    {
+                        var blobName = $"{kMLInfoDeDup.groupid}/{kMLInfoDeDup.id}/{blob.BlobName}.kml";
+                        await helperKMLParse.RemoveBlobAsync(blobName, blobClient);
+                    }
                 }
                 //getting always only last point from garmin (except if new day with active tracking has started)
                 HelperGetKMLFromGarmin GetKMLFromGarmin = new HelperGetKMLFromGarmin();
@@ -115,7 +123,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //open KML feeds from Blobstorage
                     var blobs = helperKMLParse.Blobs;
                     foreach (var blob in blobs)
-                        blob.BlobValue = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, blob.BlobName);
+                    {
+                        var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/{blob.BlobName}.kml";
+                        blob.BlobValue = await helperKMLParse.GetFromBlobAsync(blobName, blobClient);
+                    }
 
                     //process the full track
                     helperKMLParse.ParseKMLFile(kmlFeedresult, kMLInfo, blobs, emails, user, WebSiteUrl);
@@ -126,7 +137,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     await asyncCollectorKMLInfo.AddAsync(kMLInfo);
                     //save blobs
                     foreach (var blob in blobs)
-                        await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
+                    {
+                        var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/{blob.BlobName}.kml";
+                        await helperKMLParse.AddToBlobAsync(blobName, blob.BlobValue, blobClient);
+                    }
                 }
             }
 

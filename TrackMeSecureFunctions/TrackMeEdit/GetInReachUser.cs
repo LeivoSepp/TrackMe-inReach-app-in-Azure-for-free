@@ -14,6 +14,8 @@ using Microsoft.Azure.Documents;
 using Microsoft.Extensions.Configuration;
 using System.Net.Http;
 using System.Globalization;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -60,6 +62,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var TodayTrackId = config["TodayTrackId"];
             var StorageContainerConnectionString = config["StorageContainerConnectionString"];
 
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
 
             Uri collectionUri = UriFactory.CreateDocumentCollectionUri("FreeCosmosDB", "TrackMe");
             ClaimsPrincipal Identities = req.HttpContext.User;
@@ -77,19 +81,19 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 {
                     var userDataFromWeb = JsonConvert.DeserializeObject<InReachUser>(requestBody);
                     if (userDataFromWeb.userWebId != LoggedInUser.userWebId)
-                        await ChangePartitionAsync(LoggedInUser.userWebId, userDataFromWeb.userWebId, asyncCollectorKMLInfo, documentClient, collectionUri, StorageContainerConnectionString); //change partitionIDs
+                        await ChangePartitionAsync(LoggedInUser.userWebId, userDataFromWeb.userWebId, asyncCollectorKMLInfo, documentClient, collectionUri, blobClient); //change partitionIDs
                     LoggedInUser.InReachWebAddress = userDataFromWeb.InReachWebAddress;
                     LoggedInUser.InReachWebPassword = userDataFromWeb.InReachWebPassword;
                     LoggedInUser.userWebId = userDataFromWeb.userWebId.ToLower();
                     LoggedInUser.Active = userDataFromWeb.Active;
                     LoggedInUser.UserTimezone = userDataFromWeb.UserTimezone;
-                    await ManageTodayTrack(LoggedInUser, asyncCollectorKMLInfo, documentClient, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl, StorageContainerConnectionString);
+                    await ManageTodayTrack(LoggedInUser, asyncCollectorKMLInfo, documentClient, collectionUri, TodayTrackId, SendEmailFunctionUrl, SendEmailFunctionKey, WebSiteUrl, blobClient);
                 }
                 await asyncCollectorInReachUser.AddAsync(LoggedInUser);
             }
             return new OkObjectResult(LoggedInUser);
         }
-        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string TodayTrackId, string SendEmailFunctionUrl, string SendEmailFunctionKey, string WebSiteUrl, string StorageContainerConnectionString)
+        static async Task ManageTodayTrack(InReachUser LoggedInUser, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string TodayTrackId, string SendEmailFunctionUrl, string SendEmailFunctionKey, string WebSiteUrl, CloudBlobClient blobClient)
         {
             var dated1 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
             var dated2 = DateTime.UtcNow.ToUniversalTime().ToString("yyyy-MM-dd");
@@ -122,7 +126,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 await addDocuments.AddAsync(kMLInfo);
                 //save blobs
                 foreach (var blob in blobs)
-                    await helperKMLParse.AddKMLToBlobAsync(kMLInfo, blob.BlobValue, StorageContainerConnectionString, blob.BlobName);
+                {
+                    var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/{blob.BlobName}.kml";
+                    await helperKMLParse.AddToBlobAsync(blobName, blob.BlobValue, blobClient);
+                }
 
                 //sending out emails
                 if (emails.Any())
@@ -145,11 +152,14 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     await client.DeleteDocumentAsync(kML._self, new RequestOptions { PartitionKey = new PartitionKey(kML.groupid) });
                     //delete blobs
                     foreach (var blob in helperKMLParse.Blobs)
-                        await helperKMLParse.RemoveKMLBlobAsync(kML, StorageContainerConnectionString, blob.BlobName);
+                    {
+                        var blobName = $"{kML.groupid}/{kML.id}/{blob.BlobName}.kml";
+                        await helperKMLParse.RemoveBlobAsync(blobName, blobClient);
+                    }
                 }
             }
         }
-        static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, string StorageContainerConnectionString)
+        static async Task ChangePartitionAsync(string userWebId, string newUserWebId, IAsyncCollector<KMLInfo> addDocuments, DocumentClient client, Uri collectionUri, CloudBlobClient blobClient)
         {
             //getting active tracks from cosmos
             var query = new SqlQuerySpec("SELECT * FROM c WHERE c.groupid = @groupid",
@@ -168,7 +178,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 await client.DeleteDocumentAsync(kMLInfo._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
                 //rename all the blobs
                 foreach (var blob in helperKMLParse.Blobs)
-                    await helperKMLParse.RenameKMLBlobAsync(userWebId, newUserWebId, kMLInfo.id, StorageContainerConnectionString, blob.BlobName);
+                {
+                    string sourceBlob = $"{userWebId}/{kMLInfo.id}/{blob.BlobName}.kml";
+                    string newBlob = $"{newUserWebId}/{kMLInfo.id}/{blob.BlobName}.kml";
+                    await helperKMLParse.RenameBlobAsync(sourceBlob, newBlob, blobClient);
+                }
             }
         }
     }

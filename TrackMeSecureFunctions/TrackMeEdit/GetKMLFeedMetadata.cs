@@ -6,6 +6,8 @@ using System.Collections.Generic;
 using System.Security.Claims;
 using Microsoft.Extensions.Configuration;
 using System.Threading.Tasks;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Blob;
 
 namespace TrackMeSecureFunctions.TrackMeEdit
 {
@@ -51,6 +53,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 .Build();
             var StorageContainerConnectionString = config["StorageContainerConnectionString"];
 
+            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
+            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+
             ClaimsPrincipal Identities = req.HttpContext.User;
             var checkUser = new HelperCheckUser();
             var LoggedInUser = checkUser.LoggedInUser(inReachUsers, Identities);
@@ -67,8 +72,8 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 InReachWebAddress = kMLInfo.InReachWebAddress,
                 InReachWebPassword = kMLInfo.InReachWebPassword
             };
-
-            kMLData.PlannedTrack = await helperKMLParse.GetKMLFromBlobAsync(kMLInfo, StorageContainerConnectionString, "plannedtrack");
+            var blobName = $"{kMLInfo.groupid}/{kMLInfo.id}/plannedtrack.kml";
+            kMLData.PlannedTrack = await helperKMLParse.GetFromBlobAsync(blobName, blobClient);
 
             if (IsAuthenticated)
             {

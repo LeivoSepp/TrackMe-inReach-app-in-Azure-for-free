@@ -436,45 +436,32 @@ namespace TrackMeSecureFunctions.TrackMeEdit
 
             return true;
         }
-        public async Task AddKMLToBlobAsync(KMLInfo kMLInfo, string blobValue, string StorageContainerConnectionString, string blobName)
+        public async Task AddToBlobAsync(string blobName, string blobValue, CloudBlobClient blobClient)
         {
-            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blobName);
             if(!string.IsNullOrEmpty(blobValue))
                 await blockBlob.UploadTextAsync(blobValue);
         }
-        public async Task<string> GetKMLFromBlobAsync(KMLInfo kMLInfo, string StorageContainerConnectionString, string blobName)
+        public async Task<string> GetFromBlobAsync(string blobName, CloudBlobClient blobClient)
         {
-            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blobName);
             if (await blockBlob.ExistsAsync())
                 return await blockBlob.DownloadTextAsync();
             return null;
         }
-        public async Task RemoveKMLBlobAsync(KMLInfo kMLInfo, string StorageContainerConnectionString, string blobName)
+        public async Task RemoveBlobAsync(string blobName, CloudBlobClient blobClient)
         {
-            string blob = $"{kMLInfo.groupid}/{kMLInfo.id}/{blobName}.kml";
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
+            CloudBlockBlob blockBlob = container.GetBlockBlobReference(blobName);
             await blockBlob.DeleteIfExistsAsync();
         }
-        public async Task RenameKMLBlobAsync(string UserWebId, string newUserWebId, string id, string StorageContainerConnectionString, string blobName)
+        public async Task RenameBlobAsync(string sourceBlob, string newBlob, CloudBlobClient blobClient)
         {
-            string blob = $"{UserWebId}/{id}/{blobName}.kml";
-            string blobNew = $"{newUserWebId}/{id}/{blobName}.kml";
-            CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
-            CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
-            CloudBlockBlob source = container.GetBlockBlobReference(blob);
-            CloudBlockBlob target = container.GetBlockBlobReference(blobNew);
+            CloudBlockBlob source = container.GetBlockBlobReference(sourceBlob);
+            CloudBlockBlob target = container.GetBlockBlobReference(newBlob);
 
             if (await source.ExistsAsync())
             {
