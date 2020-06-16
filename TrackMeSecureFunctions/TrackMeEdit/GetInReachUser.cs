@@ -160,11 +160,16 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 kMLInfo.groupid = newUserWebId;
                 kMLInfo.d1 = DateTime.Parse(kMLInfo.d1, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
                 kMLInfo.d2 = DateTime.Parse(kMLInfo.d2, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
-                kMLInfo.LastPointTimestamp = DateTime.Parse(kMLInfo.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                if(!string.IsNullOrEmpty(kMLInfo.LastPointTimestamp))
+                    kMLInfo.LastPointTimestamp = DateTime.Parse(kMLInfo.LastPointTimestamp, CultureInfo.InvariantCulture).ToString("yyyy-MM-ddTHH:mm:ssZ");
+                //create new docs
                 await addDocuments.AddAsync(kMLInfo);
+                //delete old docs
                 await client.DeleteDocumentAsync(kMLInfo._self, new RequestOptions { PartitionKey = new PartitionKey(userWebId) });
+                //rename all the blobs
+                foreach (var blob in helperKMLParse.Blobs)
+                    await helperKMLParse.RenameKMLBlobAsync(userWebId, newUserWebId, kMLInfo.id, StorageContainerConnectionString, blob.BlobName);
             }
-            await helperKMLParse.RenameKMLBlobAsync(userWebId, newUserWebId, StorageContainerConnectionString);
         }
     }
     public class InReachUser

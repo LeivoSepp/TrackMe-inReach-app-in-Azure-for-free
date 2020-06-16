@@ -466,23 +466,26 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             CloudBlockBlob blockBlob = container.GetBlockBlobReference(blob);
             await blockBlob.DeleteIfExistsAsync();
         }
-        public async Task RenameKMLBlobAsync(string userWebId, string newUserWebId, string StorageContainerConnectionString)
+        public async Task RenameKMLBlobAsync(string UserWebId, string newUserWebId, string id, string StorageContainerConnectionString, string blobName)
         {
+            string blob = $"{UserWebId}/{id}/{blobName}.kml";
+            string blobNew = $"{newUserWebId}/{id}/{blobName}.kml";
             CloudStorageAccount storageAccount = CloudStorageAccount.Parse(StorageContainerConnectionString);
             CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
             CloudBlobContainer container = blobClient.GetContainerReference("tracks");
-            CloudBlockBlob source = (CloudBlockBlob)await container.GetBlobReferenceFromServerAsync(userWebId);
-            CloudBlockBlob target = container.GetBlockBlobReference(newUserWebId);
+            CloudBlockBlob source = container.GetBlockBlobReference(blob);
+            CloudBlockBlob target = container.GetBlockBlobReference(blobNew);
 
-            await target.StartCopyAsync(source);
+            if (await source.ExistsAsync())
+            {
+                await target.StartCopyAsync(source);
 
-            while (target.CopyState.Status == CopyStatus.Pending)
-                await Task.Delay(100);
-
-            if (target.CopyState.Status != CopyStatus.Success)
-                throw new Exception("Rename failed: " + target.CopyState.Status);
-
-            await source.DeleteAsync();
+                while (target.CopyState.Status == CopyStatus.Pending)
+                    await Task.Delay(100);
+                if (target.CopyState.Status != CopyStatus.Success)
+                    throw new Exception("Rename failed: " + target.CopyState.Status);
+                await source.DeleteAsync();
+            }
         }
 
         public List<Blob> Blobs = new List<Blob>()
