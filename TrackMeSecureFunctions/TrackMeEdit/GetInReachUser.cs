@@ -103,7 +103,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             KMLInfo kMLInfo = new KMLInfo()
             {
                 id = TodayTrackId,
-                Title = "Today's track",
+                Title = "Today's Live Track",
                 d1 = dateTimed1,
                 d2 = dateTimed2,
                 groupid = LoggedInUser.userWebId,

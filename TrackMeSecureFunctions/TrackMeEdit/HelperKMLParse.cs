@@ -70,15 +70,15 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             new StyleKeyword("messageReceived", "post_office.png",
                 new List<string>{ InReachEvents[1], InReachEvents[2] }),
             new StyleKeyword("campStyle", "campground.png",
-                new List<string>{"camp", "campsite", "tent", "bivouac", "laager" }),
+                new List<string>{"camp", "campsite", "tent", "bivouac", "laager", "campfire", "campground", "camping" }),
             new StyleKeyword("finishStyle", "parking_lot.png",
                 new List<string>{"finish", "complete", "end", "close", "parking", "stop" }),
             new StyleKeyword("summitStyle", "mountains.png",
-                new List<string>{"summit", "top", "peak", "mountain"}),
+                new List<string>{"summit", "top", "peak", "mountain", "hilltop"}),
             new StyleKeyword("picnicStyle", "picnic.png",
-                new List<string>{"picnic", "meal", "cooking", "bbq", "barbeque", "cookout" }),
+                new List<string>{"picnic", "meal", "cooking", "bbq", "barbeque", "cookout", "lunch", "breakfast", "dinner", "snack" }),
             new StyleKeyword("cameraStyle", "camera.png",
-                new List<string>{"beautiful", "beauty spot", "exciting", "nice", "great", "lovely", "pretty", "cool"})
+                new List<string>{"beautiful", "beauty spot", "exciting", "nice", "great", "lovely", "pretty", "cool", "scenery", "excitement", "emotion"})
         };
 
         //add new style into KMLfeed
@@ -174,6 +174,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             XDocument xmlLineString;
             XDocument xmlPlacemarks;
             XDocument xmlPlacemarksWithMessages;
+            XDocument xmlLastPlacemark;
 
             XElement NewPlacemark =
                 new XElement(defaultns + "Folder",
@@ -225,6 +226,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var PlacemarksAll = blobs.First(x => x.BlobName == "placemarksall").BlobValue;
             var PlacemarksMsg = blobs.First(x => x.BlobName == "placemarksmsg").BlobValue;
             var TrackLine = blobs.First(x => x.BlobName == "trackline").BlobValue;
+            var LastPlacemark = string.Empty;
 
             //create Xdocuments if they are empty
             if (!string.IsNullOrEmpty(PlacemarksAll))
@@ -250,6 +252,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                 documentLineString.Add(newLineString);
             }
 
+            xmlLastPlacemark = new XDocument(new XElement(newDoc));
+            AddStyles(xmlLastPlacemark.XPathSelectElement("//kml:Document", ns), defaultns);
+
+            var documentLastPlacemark = xmlLastPlacemark.XPathSelectElement("//kml:Document", ns);
             var documentPlacemarkMessages = xmlPlacemarksWithMessages.XPathSelectElement("//kml:Document", ns);
             var documentPlacemark = xmlPlacemarks.XPathSelectElement("//kml:Document", ns);
 
@@ -342,7 +348,11 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //check if the eventType or receivedText contains keywords, if yes, then attach the style to the placemark
                     foreach (var styleKeyword in StyleKeywords)
                     {
-                        if (styleKeyword.Keywords.Any(eventType.Contains) || styleKeyword.Keywords.Any(textValue.ToLower().Contains))
+                        //setting style for inReach turned on or any message received
+                        if (styleKeyword.Keywords.Any(eventType.Contains))
+                            NewPlacemark.XPathSelectElement("//kml:styleUrl", ns).Value = $"#{styleKeyword.StyleName}";
+                        //setting style for the keywords found in message body
+                        if (styleKeyword.Keywords.Any(textValue.ToLower().Contains))
                             NewPlacemark.XPathSelectElement("//kml:styleUrl", ns).Value = $"#{styleKeyword.StyleName}";
                     }
                     //if tracking turned on on device then copy Event into Text field
@@ -374,7 +384,6 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     //if inReach has sent out a message then add a Placemark
                     if (InReachEvents.Any(eventType.Contains))
                     {
-                        //documentPlacemark.Add(NewPlacemark);
                         documentPlacemarkMessages.Add(new XElement(NewPlacemark));
                         emails.Add(new Emails
                         {
@@ -387,7 +396,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                             EmailTo = user.subscibers
                         });
                     }
-                    //add full placemarks only for short less than 1 day tracks 
+                    //add full placemarks only for short less than 2 days tracks 
                     if (!kMLInfo.IsLongTrack)
                         documentPlacemark.Add(new XElement(NewPlacemark));
                 }
@@ -408,6 +417,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             kMLInfo.LastTotalTime = totalTime.ToString();
             kMLInfo.LastPointTimestamp = LastPointTimestamp;
 
+            //create a layer just with a last placemark
+            documentLastPlacemark.Add(new XElement(NewPlacemark));
+
+            LastPlacemark = xmlString + xmlLastPlacemark.ToString();
             PlacemarksMsg = xmlString + xmlPlacemarksWithMessages.ToString();
             TrackLine = xmlString + xmlLineString.ToString();
             //add full placemarks only for track with duration less than 2 day
@@ -417,6 +430,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             blobs.First(x => x.BlobName == "trackline").BlobValue = TrackLine;
             blobs.First(x => x.BlobName == "placemarksall").BlobValue = PlacemarksAll;
             blobs.First(x => x.BlobName == "placemarksmsg").BlobValue = PlacemarksMsg;
+            blobs.First(x => x.BlobName == "lastplacemark").BlobValue = LastPlacemark;
 
             return true;
         }
@@ -465,6 +479,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             new Blob("placemarksall", ""),
             new Blob("placemarksmsg", ""),
             new Blob("plannedtrack", ""),
+            new Blob("lastplacemark", "")
         };
     }
     public class Blob
