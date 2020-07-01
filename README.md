@@ -20,19 +20,19 @@ Host this website with zero cost using serverless architecture in Azure.
   * If someone has to find you then it is very easy to undestand how close you are.
 * People can subscribe to your Live tracks to get notified by e-mail:  
 ![Subscribe](ReadmePictures/subscribe.png)
-  * If you turn on inReach (Tracking has started)
-  * If you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.  
+  * when you turn on inReach (Tracking has started)
+  * when you send out any inReach messages like "I am in South Pole", "I am having a lunch", "I am camping here" etc.  
 * Messages icons on a map are based on keywords found in message.  
 
 |Icon|Keyword found in message|
 | ---- | ---- |
-|![Hiker](ReadmePictures/hiker.png)|Not managed by keyword! Tracking started icon.|
-|![Mailbox](ReadmePictures/mailbox.png)|Not managed by keyword! Default icon for any messages.|
-|![Campground](ReadmePictures/campground.png)|camp, campsite, tent, bivouac, laager|
+|![Campground](ReadmePictures/campground.png)|camp, campsite, camping, tent, bivouac, laager, campfire, campground|
 |![Parking](ReadmePictures/parking.png)|finish, complete, end, close, parking, stop|
-|![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain|
-|![Picnic](ReadmePictures/picnic.png)|picnic, meal, cooking, bbq, barbeque, cookout|
-|![Camera](ReadmePictures/camera.png)|beautiful, beauty spot, exciting, nice, great, lovely, pretty, cool|
+|![Summit](ReadmePictures/summit.png)|summit, top, peak, mountain, hilltop|
+|![Picnic](ReadmePictures/picnic.png)|picnic, meal, cooking, bbq, barbeque, cookout, lunch, breakfast, dinner, snack|
+|![Camera](ReadmePictures/camera.png)|beautiful, beauty spot, exciting, nice, great, lovely, pretty, cool, scenery, excitement, emotion|
+|![Hiker](ReadmePictures/hiker.png)|Not managed by keyword! Tracking started icon.|
+|![Mailbox](ReadmePictures/mailbox.png)|Not managed by keyword! Default icon for any messages if no keyword detected.|
 * People can click everywhere on the map to start navigation with Waze or Google maps.  
 ![Driveby Waze Googl](ReadmePictures/drivebyWazeGoogl.png)
 ### User functionality
