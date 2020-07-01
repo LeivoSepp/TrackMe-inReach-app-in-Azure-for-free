@@ -275,6 +275,7 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             var lineStringMessage = string.Empty;
             DateTime trackStarted = new DateTime();
             var LastPointTimestamp = string.Empty;
+            bool isTheLastPointIsZero = true;
             //iterate through each Placemark
             foreach (var placemark in placemarks)
             {
@@ -299,7 +300,10 @@ namespace TrackMeSecureFunctions.TrackMeEdit
                     GeoCoordinate pin1 = new GeoCoordinate(thisLatitudeDouble, thisLongitudeDouble);
                     GeoCoordinate pin2 = new GeoCoordinate(lastLatitude, lastLongitude);
                     if (lastLatitude != 0 && lastLongitude != 0)
+                    {
                         totalDistance += pin1.GetDistanceTo(pin2) / 1000;
+                        isTheLastPointIsZero = false;
+                    }
                     lastLatitude = thisLatitudeDouble;
                     lastLongitude = thisLongitudeDouble;
                     var distance = totalDistance.ToString("0") + " km";
@@ -417,8 +421,9 @@ namespace TrackMeSecureFunctions.TrackMeEdit
             kMLInfo.LastTotalTime = totalTime.ToString();
             kMLInfo.LastPointTimestamp = LastPointTimestamp;
 
-            //create a layer just with a last placemark
-            documentLastPlacemark.Add(new XElement(NewPlacemark));
+            //create a layer just with a last placemark if it is not zero
+            if (!isTheLastPointIsZero)
+                documentLastPlacemark.Add(new XElement(NewPlacemark));
 
             LastPlacemark = xmlString + xmlLastPlacemark.ToString();
             PlacemarksMsg = xmlString + xmlPlacemarksWithMessages.ToString();
