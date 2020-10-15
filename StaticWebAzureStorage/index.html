@@ -1,0 +1,415 @@
+<html>
+    
+<head>
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <meta name="viewport" content="width=device-width">
+
+    <meta http-equiv="refresh" content="600">
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        #map {
+            height: 100%;
+            width: 100%;
+            overflow: hidden;
+            float: left;
+            border: thin solid #333;
+            position: absolute;
+            z-index: 0;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #navi {
+            width: 200px;
+            height: 40px;
+            position: absolute;
+            z-index: 2;
+            top: 2px;
+            left: 40%;
+        }
+
+        .info {
+            position: absolute;
+            padding: 0.3rem;
+            bottom: 0;
+            left: 30%;
+            z-index: 3;
+        }
+
+        .info.error {
+            position: absolute;
+            color: #fff;
+            background: #dc3545;
+            z-index: 3;
+        }
+
+        .emailDiv {
+            position: absolute;
+            padding: 0.3rem;
+            bottom: 0;
+            left: 10px;
+            z-index: 3;
+        }
+
+        .showMeDiv {
+            position: absolute;
+            padding: 0.3rem;
+            bottom: 40px;
+            left: 10px;
+            z-index: 3;
+        }
+    </style>
+</head>
+<!--
+https://files.delorme.com/support/inreachwebdocs/KML%20Feeds.pdf
+https://developers.google.com/maps/documentation/javascript/kml 
+https://github.com/risan/google-maps-geolocation-example 
+-->
+
+<body>
+    <div id="container">
+        <div id="navi">
+            <nav class="animenu" role="navigation" aria-label="Menu">
+                <button class="animenu__btn" type="button">
+                    <span class="animenu__btn__bar"></span>
+                    <span class="animenu__btn__bar"></span>
+                    <span class="animenu__btn__bar"></span>
+                </button>
+
+                <ul class="animenu__nav">
+                    <li>
+                        <a id="tracktitle" href='#' class='animenu__nav__hasDropdown' aria-haspopup='true'></a>
+                        <ul id="ulmenu" class="animenu__nav__dropdown" aria-label="submenu" role="menu"></ul>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+        <div id="map"></div>
+        <div id="info" class="info"></div>
+        <div id="emailDiv" class="emailDiv">
+            <form id="emailForm">
+                <input type="text" id="email" name="email">
+                <input type="submit" value="subscribe:">
+            </form>
+        </div>
+        <div id="showMeDiv" class="showMeDiv">
+            <input id="showPos" type="button" value="locate me" onclick=myLocation()>
+        </div>
+    </div>
+
+    <script type="text/javascript" src="animenu.js"></script>
+
+    <script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyB7OCPR8vU0USb6NYLLbLYlWywetyS5r8s&libraries=places&callback=init">
+        </script>
+    <script type='text/javascript'>
+        var domainName = window.location.host.split('.')[1] + '.' + window.location.host.split('.')[2];
+        const baseWeb = "https://trackme." + domainName;
+        const AzureAPI = baseWeb + "/api/";
+        const TodayTrack = "TodayTrack";
+
+        var userWebId = window.location.pathname.split('/')[1];
+        var host = window.location.host.split('.')[0];
+        var userBaseAddress;
+        if (host !== 'trackme') {
+            userBaseAddress = window.location.host;
+            userWebId = host;
+        }
+        else
+            userBaseAddress = window.location.host + '/' + userWebId;
+
+        var map;
+        var marker;
+        var locationMarker;
+        const urlParams = new URLSearchParams(window.location.search);
+        var getID = urlParams.get('id');
+        var kmlId = getID;
+        if (!kmlId) kmlId = TodayTrack;
+        // var host = window.location.host.split('.')[0];
+        // if (!userid) window.location.href = window.location.href.split('?')[0]+"epicworld/?"+urlParams;
+
+        //Get all KML Feeds from cosmos
+        async function cachedFetch(url, options) {
+            let expiry = 5 * 60; // 5 min default
+            if (typeof options === 'number') {
+                expiry = options;
+                options = undefined;
+            } else if (typeof options === 'object') {
+                // I hope you didn't set it to 0 seconds
+                expiry = options.seconds || expiry;
+            }
+            // Use the URL as the cache key to sessionStorage
+            let cacheKey = url;
+            let cached = localStorage.getItem(cacheKey);
+            let whenCached = localStorage.getItem(cacheKey + ':ts');
+            if (cached !== null && whenCached !== null) {
+                // it was in sessionStorage! Yay!
+                // Even though 'whenCached' is a string, this operation
+                // works because the minus sign tries to convert the
+                // string to an integer and it will work.
+                let age = (Date.now() - whenCached) / 1000;
+                if (age < expiry) {
+                    let response = new Response(new Blob([cached]));
+                    return Promise.resolve(response);
+                } else {
+                    // We need to clean up this old key
+                    localStorage.removeItem(cacheKey);
+                    localStorage.removeItem(cacheKey + ':ts');
+                }
+            }
+
+            return await fetch(url, options).then(response => {
+                // let's only store in cache if the content-type is 
+                // JSON or something non-binary
+                if (response.status === 200) {
+                    let ct = response.headers.get('Content-Type');
+                    if (ct && (ct.match(/application\/json/i) || ct.match(/text\//i))) {
+                        // There is a .json() instead of .text() but 
+                        // we're going to store it in sessionStorage as 
+                        // string anyway.
+                        // If we don't clone the response, it will be 
+                        // consumed by the time it's returned. This 
+                        // way we're being un-intrusive. 
+                        response.clone().text().then(content => {
+                            localStorage.setItem(cacheKey, content);
+                            localStorage.setItem(cacheKey + ':ts', Date.now());
+                        })
+                    }
+                }
+                return response;
+            })
+        }
+
+        // (async () => {
+        //     const resp = await fetch(AzureAPI + "GetAllKMLFeedsFromCosmos/"+userWebId);
+        //     const jsonData = await resp.json();
+        //     var jsonTable = jsonToTable(jsonData);
+        // })();
+
+        //fill out the dropdown menu with the inReach track names
+        //check active feed and redirect browser to active feed if no ID presented in querystring
+        async function jsonToTable() {
+
+            const json = await cachedFetch(AzureAPI + "GetAllKMLFeedsFromCosmos/" + userWebId, 60 * 60) //cache one hour
+                .then(r => r.json());
+
+            // const json = await fetchWithCache("tracks", cacheTime);
+            var activeTrackId;
+            var activeTrackTitle;
+            var activeTrackDate1;
+            var selectedTrackTitle;
+            var selectedTrackDate1;
+            var selectedTrackId;
+            var li = "";
+            for (var i = 0; i < json.length; i++) {
+                var x = json[i];
+                li += "<li>";
+                li += "<a role='menuitem' href='https://" + userBaseAddress + "?id=" + encodeURI(x['id']) + "'>" + x['Title'] + "</a>";
+                li += "</li>"
+                //if we have an ID in query string then save the selected feed metadata into variables 
+                if (encodeURI(x['id']) === kmlId) {
+                    selectedTrackId = encodeURI(x['id']);
+                    selectedTrackTitle = x['Title'];
+                    selectedTrackDate1 = x['d1'];
+                }
+                //parse dates for checking active feed
+                var setDate1 = Date.parse(x['d1']);
+                var setDate2 = Date.parse(x['d2']); // + 86400000; // + 1 day in ms
+                var today = new Date().getTime();
+                //if we have an active feed, then save that feed metadata into variables
+                if (setDate1 <= today && setDate2 >= today) {
+                    activeTrackId = encodeURI(x['id']);
+                    activeTrackTitle = x['Title'];
+                    activeTrackDate1 = x['d1'];
+                }
+            }
+            //if someone is going to the page without any ID and there is an active feed currently, 
+            //then browser is jumping automatically into that feed
+            if (!getID && activeTrackId) {
+                selectedTrackId = activeTrackId;
+                selectedTrackTitle = activeTrackTitle;
+                selectedTrackDate1 = activeTrackDate1;
+                window.location.href = '?id=' + selectedTrackId;
+            }
+            window.history.pushState(null, null, 'https://' + userBaseAddress + '?id=' + selectedTrackId); //change just the URL
+            //fill out drop-down menu
+            document.getElementById("ulmenu").innerHTML += li;
+
+            //transform the data and fill out default (selected) drop-down menu
+            var setDate = Date.parse(selectedTrackDate1);
+            var myDate = new Date(setDate);
+            var strDate = myDate.getDate() + "." + (myDate.getMonth() + 1) + "." + myDate.getFullYear();
+            var seTitle = selectedTrackTitle;
+            document.getElementById("tracktitle").innerHTML += seTitle + " " + strDate;
+        }
+
+        //build a link for getting avtive KMLfeed and planned track
+        var inReachAndId = '/' + userWebId + '/' + kmlId;
+        var dummyParameter = '?dummy=' + (new Date()).getTime()
+        var trackLine = baseWeb + '/tracks' + inReachAndId + '/trackline.kml' + dummyParameter;
+        var plannedTrack = baseWeb + '/tracks' + inReachAndId + '/plannedtrack.kml' + dummyParameter;
+        var placemarksMsg = baseWeb + '/tracks' + inReachAndId + '/placemarksmsg.kml' + dummyParameter;
+        var placemarksAll = baseWeb + '/tracks' + inReachAndId + '/placemarksall.kml' + dummyParameter;
+        var lastPlacemark = baseWeb + '/tracks' + inReachAndId + '/lastplacemark.kml' + dummyParameter;
+
+        /**
+        * Create google maps Map instance.
+        */
+        function initMap() {
+            map = new google.maps.Map(document.getElementById('map'), {
+                center: new google.maps.LatLng(59, 25),
+                zoom: 6,
+                gestureHandling: 'greedy',
+                mapTypeId: 'terrain',
+                mapTypeControl: true,
+                streetViewControl: false,
+                zoomControl: false,
+                scaleControl: true,
+                fullscreenControl: false,
+                mapTypeControlOptions: {
+                    style: google.maps.MapTypeControlStyle.DROPDOWN_MENU,
+                    position: google.maps.ControlPosition.TOP_LEFT,
+                    mapTypeIds: ['terrain', "hybrid"]
+                }
+            });
+            //add event hadler into map to allow users to put markers on it
+            map.addListener('click', function (e) {
+                placeMarkerAndPanTo(e.latLng, map);
+            });
+        }
+
+        //let user to click on the map and create a marker
+        function placeMarkerAndPanTo(latLng, map) {
+            //remove the previous marker from the map
+            if (marker && marker.setMap) {
+                marker.setMap(null);
+            }
+            //put marker on the map
+            marker = new google.maps.Marker({
+                position: latLng,
+                map: map
+            });
+            //set infowindow to open Google Maps or Waze for driving
+            var infoWindow = new google.maps.InfoWindow({
+                content: '<a href="https://www.google.com/maps/search/?api=1&query=' + latLng + '" target="_blank" rel="noopener" style="cursor: pointer; color: rgb(66, 127, 237); text-decoration: none;">Drive by Google Maps</a><br>' +
+                    '<a href="https://waze.com/ul?ll=' + latLng.lat() + ',' + latLng.lng() + '" target="_blank" rel="noopener" style="cursor: pointer; color: rgb(66, 127, 237); text-decoration: none;">Drive by Waze</a>'
+            });
+            //add event handler to the marker for opening infowindow
+            google.maps.event.addListener(marker, 'click', function () {
+                infoWindow.open(map, marker);
+            });
+            map.panTo(latLng);
+        }
+        /**
+         * Create google maps Marker instance for user position tracking
+         * @param {Object} map
+         * @param {Object} position
+         * @return {Object}
+         */
+        const createMarker = ({ map, position }) => {
+            return new google.maps.Marker({
+                map, position,
+                icon: {
+                    path: google.maps.SymbolPath.CIRCLE,
+                    strokeColor: 'red',
+                    strokeWeight: 14,
+                    fillColor: 'red',
+                    fillOpacity: 0.6
+                },
+            });
+        };
+
+        function KMLLayer(map, kmlFile) {
+            return new google.maps.KmlLayer(kmlFile, {
+                // suppressInfoWindows: false,
+                // preserveViewport: false,
+                map: map
+            });
+        }
+
+
+
+        function myLocation() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(getPosition, showError);
+            }
+            else {
+                alert("Geolocation is not supported by this browser.");
+            }
+        }
+
+        function getPosition(position) {
+            UserLatitude = position.coords.latitude;
+            UserLongitude = position.coords.longitude;
+            showPosition(UserLatitude, UserLongitude);
+        }
+
+        function showPosition(userLatitude, userLongitude) {
+            if (locationMarker && locationMarker.setMap) {
+                locationMarker.setMap(null);
+            }
+            lat = userLatitude;
+            lon = userLongitude;
+            const initialPosition = { lat: lat, lng: lon };
+            locationMarker = createMarker({ map, position: initialPosition });
+            latlon = new google.maps.LatLng(lat, lon);
+            map.panTo(latlon);
+        }
+
+        function showError(error) {
+            switch (error.code) {
+                case error.PERMISSION_DENIED:
+                    alert("User denied the request for Geolocation.");
+                    break;
+                case error.POSITION_UNAVAILABLE:
+                    alert("Location information is unavailable.")
+                    break;
+                case error.TIMEOUT:
+                    alert("The request to get user location timed out.")
+                    break;
+                case error.UNKNOWN_ERROR:
+                    alert("An unknown error occurred.")
+                    break;
+            }
+        }
+
+
+        /**
+         * Initialize the application.
+         * Automatically called by the google maps API once it's loaded.
+        */
+        function init() {
+            initMap();
+            KMLLayer(map, plannedTrack);
+            KMLLayer(map, placemarksMsg);
+            KMLLayer(map, trackLine);
+            KMLLayer(map, placemarksAll);
+            KMLLayer(map, lastPlacemark);
+
+            jsonToTable();
+
+            document.getElementById('emailForm').addEventListener("submit", SubscribeEmail);
+        }
+        //subscribe email
+        async function SubscribeEmail(event) {
+            event.preventDefault();
+            var email = document.getElementById('email').value
+            var FunctionUrl = AzureAPI + "SubscribeForTracks/" + userWebId + "/" + email;
+            await fetch(FunctionUrl, {
+                method: 'GET'
+            });
+            document.getElementById('email').value = "";
+        };
+    </script>
+</body>
+
+</html>

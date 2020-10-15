@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta name="viewport" content="width=device-width">
+
+    <!-- adding Bootstrap 4 for UI components  -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.4.1/css/bootstrap.min.css"
+        integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh" crossorigin="anonymous">
+
+    <script>
+        const AzureSecureAPI = "https://"+window.location.host+"/api/";
+        var domainName = window.location.host.split('.')[1] + '.' + window.location.host.split('.')[2];
+        function init() {
+            document.getElementById('changeUser').addEventListener("submit", PostUserForm);
+            document.getElementById('checkActive').addEventListener('change', CheckBoxChange);
+        }
+    </script>
+
+</head>
+
+<body onload="init()">
+
+    <form id="changeUser">
+        <table>
+            <tr>
+                <td colspan="2">Welcome <div id="name"></div></td>
+            </tr>
+            <tr>
+                <td colspan="2"><div id="email"></div></td>
+            </tr>
+			<tr><td colspan="2">Your personal tracks web page:</td></tr>
+            <tr>
+                <td><div id="host"></div></td>
+                <td><input type="text" id="userWebId" name="userWebId" required></td>
+            </tr>
+            <tr>
+                <td>InReach share name</td>
+                <td><input type="text" id="InReachWebAddress" name="InReachWebAddress"></td>
+            </tr>
+            <tr>
+                <td>InReach web password</td>
+                <td><input id="InReachWebPassword" type="password" name="InReachWebPassword" /></td>
+            </tr>
+            <tr>
+                <td>Enable active daily tracking</td>
+                <td><input type="checkbox" id="checkActive" checked><input type="hidden" name="Active" id="Active" value="true"></td>
+            </tr>
+            <tr> 
+                <td><input type="submit" value="Next step: set up tracks"></td>
+            </tr>
+
+        </table>
+        <input type="hidden" id="UserTimezone" name="UserTimezone">
+    </form>
+    <script>
+        // var loggedinUser;
+        (async () => {
+            const resp = await fetch(AzureSecureAPI + "GetInReachUser");
+            const loggedinUser = await resp.json();
+            // userWebId = loggedinUser['userWebId'];
+            // if (userWebId !== checkUserWebId)
+            // window.location.href = window.location.origin + '/' + userWebId + '/';
+			document.getElementById("name").innerHTML  = loggedinUser.name;
+			document.getElementById("email").innerHTML  = loggedinUser.email;
+			document.getElementById("host").innerHTML  = 'https://trackme.'+domainName+'/';
+			if (loggedinUser.status === "Existing user") {
+				document.getElementById("userWebId").value = loggedinUser.userWebId;
+				document.getElementById("InReachWebAddress").value = loggedinUser.inReachWebAddress;
+				document.getElementById("InReachWebPassword").value = loggedinUser.inReachWebPassword;
+				if (loggedinUser['active'])
+				{
+					document.getElementById("Active").value = true;
+					document.getElementById("checkActive").checked = true;
+				}
+				else
+				{
+					document.getElementById("Active").value = false;
+					document.getElementById("checkActive").checked = false;
+				}
+			}
+			if (loggedinUser.status === "New user") {
+				document.getElementById("userWebId").value = loggedinUser.name.replace(/\s/g, '');
+			}
+        })();
+
+		async function PostUserForm(event) {
+            var userWebId = document.getElementById("userWebId").value;
+            document.getElementById('UserTimezone').value = -new Date().getTimezoneOffset()/60;
+            event.preventDefault();
+            var FunctionUrl = AzureSecureAPI + "GetInReachUser";
+			var dataJson = JSON.stringify(Object.fromEntries(new FormData(event.target)));
+            await fetch(FunctionUrl, {
+                method: 'POST',
+                body: dataJson,
+                credentials: "include",
+				headers: {
+					'Accept': 'application/json',
+					'Content-Type': 'application/json'
+				}
+            });
+            window.location.href = window.location.origin + '/' + userWebId + '/';
+        };
+		
+ 	 function isNumber(evt) {
+        var charCode = (evt.which) ? evt.which : event.keyCode
+        if (charCode > 31 && (charCode < 65 || charCode > 90)) {
+            return false;
+        }
+        return true;
+    }
+
+		function CheckBoxChange(event)
+		{
+			if (event.target.checked)
+				document.getElementById('Active').value = true;
+			else
+				document.getElementById('Active').value = false;
+		}
+
+    </script>
+
+</body>
+
+</html>

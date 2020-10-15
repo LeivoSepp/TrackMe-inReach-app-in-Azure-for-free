@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/css/bootstrap.min.css"
+        integrity="sha384-9aIt2nRpC12Uk9gS9baDl411NQApFmC26EwAOH8WgZl5MYYxFfc+NcPb1dKGj7Sk" crossorigin="anonymous">
+
+    <script>
+        var domainName = window.location.host.split('.')[1] + '.' + window.location.host.split('.')[2];
+        const AzureAPI = "https://trackme." + domainName + "/api/";
+        const AzureSecureAPI = "https://" + window.location.host + "/api/";
+        const TrackMeURL = "https://trackme." + domainName;
+        const TodayTrack = "TodayTrack";
+
+        function init() {
+            document.getElementById('kmlFileUpload').addEventListener('change', readFileContents, false);
+            document.getElementById('addEditForm').addEventListener("submit", PostAddEditForm);
+            document.getElementById('useDefaultInReach').addEventListener('change', UseDefaultInReach);
+        }
+    </script>
+    <style>
+        html,
+        body {
+            padding: 0;
+            margin: 0;
+        }
+
+        #container {
+            width: 100%;
+            height: 100%;
+            position: relative;
+        }
+
+        #navi {
+            position: relative;
+            width: 500px;
+            top: 0;
+        }
+
+        #info {
+            position: absolute;
+            left: 500px;
+            top: 0;
+        }
+
+        input[type="date"]::-webkit-datetime-edit,
+        input[type="date"]::-webkit-inner-spin-button,
+        input[type="date"]::-webkit-clear-button {
+            color: #fff;
+            position: relative;
+        }
+
+        input[type="date"]::-webkit-datetime-edit-year-field {
+            position: absolute !important;
+            border-left: 1px solid #8c8c8c;
+            padding: 0px 2px 2px 6px;
+            color: #000;
+            left: 56px;
+        }
+
+        input[type="date"]::-webkit-datetime-edit-month-field {
+            position: absolute !important;
+            border-left: 1px solid #8c8c8c;
+            padding: 0px 2px 2px 6px;
+            color: #000;
+            left: 26px;
+        }
+
+        input[type="date"]::-webkit-datetime-edit-day-field {
+            position: absolute !important;
+            color: #000;
+            padding: 0px 2px;
+            left: 4px;
+        }
+    </style>
+</head>
+
+<body onload="init()">
+    <br>
+
+    <div id="container">
+        <div id="navi">
+            <table id="KMLtable"></table>
+        </div>
+        <div id="info">
+            <form id="addEditForm">
+                <table>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                    </tr>
+                    <tr>
+                        <td>Track name</td>
+                        <td><input id="Title" type="text" name="Title" /></td>
+
+                    </tr>
+                    <tr>
+                        <td>Start date</td>
+                        <td><input id="d1" type="date" name="d1" /></td>
+                    </tr>
+                    <tr>
+                        <td>End date</td>
+                        <td><input id="d2" type="date" name="d2" /></td>
+
+                    </tr>
+                    <tr>
+                        <td>InReach address</td>
+                        <td><input id="InReachWebAddress" type="text" name="InReachWebAddress" /><input type="checkbox"
+                                id="useDefaultInReach"></td>
+                    </tr>
+                    <tr>
+                        <td>InReach password</td>
+                        <td><input id="InReachWebPassword" type="password" name="InReachWebPassword" /></td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" align="right">
+                            <input type="submit" value="Save track" />
+                            <input type="button" value="Delete track" onclick="DeleteTrack()">
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">Upload your planned track in KML format (for example export from Plotaroute)
+                        </td>
+                    </tr>
+                    <tr>
+                        <td colspan="2">
+                            <input id="kmlFileUpload" type="file" name="kml" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td> <a href=# onclick="ShowHide('PlannedTrack')">Edit KML track</a>
+                        </td>
+                    </tr>
+                </table>
+                <textarea rows="30" cols="92" id="PlannedTrack" style="display: none;"
+                    name="PlannedTrack"></textarea><br>
+                <input type="hidden" id="UserTimezone" name="UserTimezone">
+                <input id="id" type="hidden" name="id" />
+            </form>
+        </div>
+    </div>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        var kmlId = urlParams.get('id');
+        if (!kmlId) kmlId = TodayTrack;
+        var userWebId = window.location.pathname.split('/')[1];
+
+        var today = new Date(); //get today's datetime
+        var dd = String(today.getDate()).padStart(2, '0');
+        var mm = String(today.getMonth() + 1).padStart(2, '0'); //January is 0!
+        var yyyy = today.getFullYear();
+        today = yyyy + '-' + mm + '-' + dd;
+
+        function ShowHide(elementId) {
+            var x = document.getElementById(elementId);
+            if (x.style.display === "none") {
+                x.style.display = "block";
+            } else {
+                x.style.display = "none";
+            }
+        }
+
+        //set the form date d1 and d2 by default today and today
+        document.getElementById('d1').value = today;
+        document.getElementById('d2').value = today;
+        //read KML file contents (this is the planned track) and put it into textarea
+        //user can edit the contents before submitting form
+        function readFileContents(event) {
+            var fr = new FileReader();
+            fr.onload = function () {
+                document.getElementById('PlannedTrack')
+                    .value = fr.result;
+            }
+            fr.readAsText(event.target.files[0]);
+        }
+
+        //check logged in user and get metadata
+        var loggedinUser;
+        var loggedinWebAddr;
+        (async () => {
+            const resp = await fetch(AzureSecureAPI + "GetInReachUser");
+            loggedinUser = await resp.json();
+            loggedinWebAddr = loggedinUser.inReachWebAddress;
+            if (userWebId !== loggedinUser.userWebId)
+                window.location.href = window.location.origin;
+        })();
+
+        //Add or Edit the current track
+        async function PostAddEditForm(event) {
+            document.getElementById('InReachWebAddress').disabled = false;
+            document.getElementById('InReachWebPassword').disabled = false;
+            document.getElementById('UserTimezone').value = -new Date().getTimezoneOffset() / 60;
+
+            event.preventDefault();
+            var FunctionUrl = AzureSecureAPI + "SetInReachFeed";
+            var dataJson = JSON.stringify(Object.fromEntries(new FormData(event.target)));
+            await fetch(FunctionUrl, {
+                method: 'POST',
+                body: dataJson,
+                credentials: "include",
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            });
+            window.location.href = window.location.href.split('?')[0];
+        };
+
+        //delete selected track
+        async function DeleteTrack() {
+            var FunctionUrl = AzureSecureAPI + "DeleteInReachFeedFromCosmos/" + userWebId + "/" + kmlId;
+            await fetch(FunctionUrl, {
+                method: 'GET',
+                credentials: "include"
+            });
+            window.location.href = window.location.href.split('?')[0];
+        };
+
+        function getMyDate(date) {
+            var dd = date.getDate();
+            var mm = date.getMonth() + 1;
+            var yyyy = date.getFullYear();
+            if (dd < 10)
+                dd = '0' + dd;
+            if (mm < 10)
+                mm = '0' + mm;
+            return yyyy + '-' + mm + '-' + dd;
+        }
+        //get the selected KML track metadata
+        var inReachWebAddr;
+        var kmlData;
+        if (kmlId !== TodayTrack) {
+            (async () => {
+                const resp = await fetch(AzureSecureAPI + "GetKMLFeedMetadata/" + userWebId + "/" + kmlId);
+                kmlData = await resp.json();
+                inReachWebAddr = kmlData.inReachWebAddress;
+                //fill out the form with the selected track
+                var dateD1 = new Date(kmlData.d1);
+                var timezone = -new Date().getTimezoneOffset() / 60;
+                dateD1.setHours(dateD1.getHours() + timezone);
+                d1 = getMyDate(dateD1);
+
+                var dateD2 = new Date(kmlData.d2);
+                dateD2.setHours(dateD2.getHours() + timezone);
+                dateD2.setDate(dateD2.getDate() - 1);
+                var d2 = getMyDate(dateD2);
+
+                document.getElementById("PlannedTrack").value = kmlData.plannedTrack;
+                document.getElementById("id").value = kmlData.id;
+                document.getElementById("Title").value = kmlData.title;
+                document.getElementById("d1").value = d1;
+                document.getElementById("d2").value = d2;
+                document.getElementById("InReachWebAddress").value = kmlData.inReachWebAddress;
+                document.getElementById("InReachWebPassword").value = kmlData.inReachWebPassword;
+                if (kmlData.inReachWebAddress === loggedinWebAddr)
+                    check();
+                else
+                    uncheck();
+            })();
+        }
+
+        //Get all KML Feeds from cosmos
+        (async () => {
+            const resp = await fetch(AzureAPI + "GetAllKMLFeedsFromCosmos/" + userWebId);
+            const jsonData = await resp.json();
+            var jsonTable = jsonToTable(jsonData);
+        })();
+
+        function UseDefaultInReach(event) {
+            if (event.target.checked)
+                check();
+            else
+                uncheck();
+        }
+        function check() {
+            document.getElementById('InReachWebAddress').disabled = true;
+            document.getElementById('InReachWebPassword').disabled = true;
+            document.getElementById('InReachWebAddress').value = loggedinUser.inReachWebAddress;
+            document.getElementById('InReachWebPassword').value = loggedinUser.inReachWebPassword;
+            document.getElementById("useDefaultInReach").checked = true;
+        }
+        function uncheck() {
+            document.getElementById('InReachWebAddress').disabled = false;
+            document.getElementById('InReachWebPassword').disabled = false;
+            document.getElementById("useDefaultInReach").checked = false;
+            if (inReachWebAddr === loggedinWebAddr || kmlId === TodayTrack) {
+                document.getElementById("InReachWebAddress").value = "";
+                document.getElementById("InReachWebPassword").value = "";
+            }
+            else {
+                document.getElementById("InReachWebAddress").value = kmlData.inReachWebAddress;
+                document.getElementById("InReachWebPassword").value = kmlData.inReachWebPassword;
+            }
+
+        }
+
+        //fill out the table  with inReach track names
+        function jsonToTable(json) {
+            var parsejson = json;
+            var table = "<table>";
+            table += "<tr><th>Title</th><th>Start date</th><th>End date</th><th>Change</th></tr>"
+            for (var i = 0; i < parsejson.length; i++) {
+                var x = parsejson[i];
+                table += "<tr>";
+                table += "<td><a target='_blank' href='" + TrackMeURL + '/' + userWebId + "?id=" + encodeURI(x.id) + "'>" + x["Title"] + "</a></td>";
+                table += "<td>" + x["d1"] + "</td>";
+                table += "<td>" + x["d2"] + "</td>";
+                table += "<td><a href='?id=" + encodeURI(x.id) + "' >Change/Delete</a></td>";
+                table += "</tr>"
+            }
+            document.getElementById("KMLtable").innerHTML += table;
+        }
+    </script>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"
+        integrity="sha384-DfXdz2htPH0lsSSs5nCTpuj/zy4C+OGpamoFVy38MVBnE+IbbVYUew+OrCXaRkfj"
+        crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/popper.js@1.16.0/dist/umd/popper.min.js"
+        integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"
+        crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.0/js/bootstrap.min.js"
+        integrity="sha384-OgVRvuATP1z7JjHLkuOU7Xw704+h835Lr+6QL9UvYjZE3Ipu6Tp75j7Bh/kR0JKI"
+        crossorigin="anonymous"></script>
+</body>
+
+</html>
