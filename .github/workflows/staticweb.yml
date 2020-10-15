@@ -9,4 +9,4 @@ jobs:
       with:
         enabled-static-website: 'true'
         folder: 'StaticWebAzureStorage'
-        connection-string: ${{ secrets.CONNECTION_STRING }}
+        connection-string: ${{ secrets.STORAGE_ACCOUNT }}
