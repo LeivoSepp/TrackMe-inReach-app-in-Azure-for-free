@@ -1,7 +1,7 @@
 name: Deploy trackme public functions to Azure Function App
 
 on:
-  [push]
+  [workflow_dispatch]
 
 # CONFIGURATION
 # For help, go to https://github.com/Azure/Actions
