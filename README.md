@@ -1,11 +1,12 @@
 # TrackMe inReach app
 #### https://track.ekstreem.ee/
 ### What is this app?
+Share your Garmin inReach position and messages during your outdoor adventures in near real time.  
+### Values, why this app needed?
 1. For the **peace of mind** of my loved ones.
 2. To **inspire others** to dream more, learn more, do more and become more.
 3. **Intuitive** user experience.
 
-Share your Garmin inReach position and messages during your outdoor adventures in near real time.  
 Host this website with zero cost using serverless architecture in Azure.
 ### Public functionality
 ![Track](ReadmePictures/track.png)
