@@ -34,6 +34,13 @@
         "route": "/animenu.js"
       },
       "backendUri": "https://trackme.z6.web.core.windows.net/animenu.js"
+    },
+    "kmlicons": {
+      "matchCondition": {
+        "methods": [ "GET" ],
+        "route": "/kmlicons/{icons}"
+      },
+      "backendUri": "https://trackme.z6.web.core.windows.net/kmlicons/{icons}"
     }
   }
 }
